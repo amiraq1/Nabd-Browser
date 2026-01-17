@@ -8,555 +8,273 @@ import {
     TextInput,
     Animated,
     Dimensions,
-    I18nManager,
+    ImageBackground,
+    Image,
 } from "react-native";
+
+// شعار نبض - الدرع السداسي
+const NabdLogo = require("@/../../assets/images/nabd_logo.png");
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useColors } from "@/hooks/useColors";
+import { BlurView } from "expo-blur"; // <-- تأثير الزجاج
 import { useBrowser } from "@/context/BrowserContext";
-import { Spacing, BorderRadius, Typography, Shadows } from "@/constants/theme";
+import { Spacing, BorderRadius, Shadows } from "@/constants/theme";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-interface Shortcut {
-    name: string;
-    nameAr: string;
-    url: string;
-    icon: keyof typeof Feather.glyphMap;
-    gradient: readonly [string, string];
-}
+// ألوان Banana Pro (Dark & Neon)
+const PRO_THEME = {
+    background: ["#0f172a", "#1e1b4b"], // Deep Navy -> Indigo
+    cardGlass: "rgba(255, 255, 255, 0.1)", // شفاف
+    accent: "#6366f1", // Indigo Accent
+    text: "#f8fafc",
+    textSecondary: "#94a3b8",
+    border: "rgba(255, 255, 255, 0.15)"
+};
 
-interface QuickTip {
-    id: string;
-    title: string;
-    description: string;
-    icon: keyof typeof Feather.glyphMap;
-}
-
-const shortcuts: Shortcut[] = [
-    {
-        name: "Google",
-        nameAr: "جوجل",
-        url: "https://google.com",
-        icon: "search",
-        gradient: ["#4285F4", "#34A853"] as const,
-    },
-    {
-        name: "YouTube",
-        nameAr: "يوتيوب",
-        url: "https://youtube.com",
-        icon: "youtube",
-        gradient: ["#FF0000", "#CC0000"] as const,
-    },
-    {
-        name: "Twitter",
-        nameAr: "تويتر",
-        url: "https://twitter.com",
-        icon: "twitter",
-        gradient: ["#1DA1F2", "#0A8AD8"] as const,
-    },
-    {
-        name: "GitHub",
-        nameAr: "جيت هب",
-        url: "https://github.com",
-        icon: "github",
-        gradient: ["#333333", "#24292E"] as const,
-    },
-    {
-        name: "Wikipedia",
-        nameAr: "ويكيبيديا",
-        url: "https://ar.wikipedia.org",
-        icon: "book-open",
-        gradient: ["#636466", "#8B8D8F"] as const,
-    },
-    {
-        name: "LinkedIn",
-        nameAr: "لينكد إن",
-        url: "https://linkedin.com",
-        icon: "linkedin",
-        gradient: ["#0077B5", "#005582"] as const,
-    },
-    {
-        name: "Reddit",
-        nameAr: "ريديت",
-        url: "https://reddit.com",
-        icon: "message-circle",
-        gradient: ["#FF4500", "#FF5722"] as const,
-    },
-    {
-        name: "Pinterest",
-        nameAr: "بنترست",
-        url: "https://pinterest.com",
-        icon: "image",
-        gradient: ["#E60023", "#BD081C"] as const,
-    },
-];
-
-const quickTips: QuickTip[] = [
-    {
-        id: "1",
-        title: "تصفح خاص",
-        description: "اضغط مطولاً على زر + لفتح تبويب متخفي",
-        icon: "eye-off",
-    },
-    {
-        id: "2",
-        title: "الذكاء الاصطناعي",
-        description: "استخدم AI لتلخيص أي صفحة فوراً",
-        icon: "cpu",
-    },
-    {
-        id: "3",
-        title: "البحث السريع",
-        description: "اكتب في شريط العنوان للبحث مباشرة",
-        icon: "zap",
-    },
+const shortcuts = [
+    { name: "Google", url: "https://google.com", icon: "search", color: "#4285F4" },
+    { name: "YouTube", url: "https://youtube.com", icon: "youtube", color: "#FF0000" },
+    { name: "X (Twitter)", url: "https://twitter.com", icon: "twitter", color: "#FFF" },
+    { name: "GitHub", url: "https://github.com", icon: "github", color: "#FFF" },
+    { name: "ChatGPT", url: "https://chat.openai.com", icon: "message-square", color: "#10A37F" },
+    { name: "Amazon", url: "https://amazon.com", icon: "shopping-cart", color: "#FF9900" },
 ];
 
 export function HomePage() {
-    const colors = useColors();
     const { navigateTo } = useBrowser();
-
-    // Animation refs
-    const logoScale = useRef(new Animated.Value(0)).current;
-    const logoRotate = useRef(new Animated.Value(0)).current;
-    const titleOpacity = useRef(new Animated.Value(0)).current;
-    const searchBarSlide = useRef(new Animated.Value(50)).current;
-    const cardAnimations = useRef(
-        shortcuts.map(() => new Animated.Value(0))
-    ).current;
-    const tipSlide = useRef(new Animated.Value(100)).current;
-    const pulseAnim = useRef(new Animated.Value(1)).current;
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
 
     useEffect(() => {
-        // Staggered entrance animations
-        Animated.sequence([
-            // Logo entrance
-            Animated.parallel([
-                Animated.spring(logoScale, {
-                    toValue: 1,
-                    tension: 50,
-                    friction: 7,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(logoRotate, {
-                    toValue: 1,
-                    duration: 800,
-                    useNativeDriver: true,
-                }),
-            ]),
-            // Title fade in
-            Animated.timing(titleOpacity, {
-                toValue: 1,
-                duration: 400,
-                useNativeDriver: true,
-            }),
-            // Search bar slide up
-            Animated.spring(searchBarSlide, {
-                toValue: 0,
-                tension: 60,
-                friction: 8,
-                useNativeDriver: true,
-            }),
+        Animated.parallel([
+            Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+            Animated.spring(slideAnim, { toValue: 0, tension: 50, useNativeDriver: true })
         ]).start();
-
-        // Staggered cards animation
-        cardAnimations.forEach((anim, index) => {
-            Animated.timing(anim, {
-                toValue: 1,
-                duration: 400,
-                delay: 300 + index * 80,
-                useNativeDriver: true,
-            }).start();
-        });
-
-        // Tips slide in
-        Animated.timing(tipSlide, {
-            toValue: 0,
-            duration: 600,
-            delay: 800,
-            useNativeDriver: true,
-        }).start();
-
-        // Continuous pulse animation for logo
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 1.05,
-                    duration: 1500,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 1500,
-                    useNativeDriver: true,
-                }),
-            ])
-        ).start();
     }, []);
 
-    const logoRotation = logoRotate.interpolate({
-        inputRange: [0, 1],
-        outputRange: ["0deg", "360deg"],
-    });
-
     const handleSearch = (text: string) => {
-        if (text.trim()) {
-            const isUrl = /^(https?:\/\/|www\.)/i.test(text) || /\.[a-z]{2,}$/i.test(text);
-            if (isUrl) {
-                const url = text.startsWith("http") ? text : `https://${text}`;
-                navigateTo(url);
-            } else {
-                navigateTo(`https://www.google.com/search?q=${encodeURIComponent(text)}`);
-            }
-        }
+        if (!text.trim()) return;
+        const url = text.includes(".") ? (text.startsWith("http") ? text : `https://${text}`) : `https://www.google.com/search?q=${encodeURIComponent(text)}`;
+        navigateTo(url);
     };
 
     return (
-        <ScrollView
-            style={[styles.scrollView, { backgroundColor: colors.backgroundRoot }]}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-        >
-            {/* Header Section with Gradient */}
+        <View style={styles.container}>
+            {/* الخلفية المتدرجة الاحترافية */}
             <LinearGradient
-                colors={[colors.backgroundSecondary, colors.backgroundRoot]}
-                style={styles.headerGradient}
+                colors={PRO_THEME.background as any}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            />
+
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
             >
-                {/* Animated Logo */}
-                <Animated.View
-                    style={[
-                        styles.logoContainer,
-                        {
-                            transform: [
-                                { scale: Animated.multiply(logoScale, pulseAnim) },
-                                { rotate: logoRotation },
-                            ],
-                        },
-                    ]}
-                >
-                    <LinearGradient
-                        colors={[colors.accent, "#0891B2"]}
-                        style={styles.logoCircle}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                    >
-                        <Feather name="activity" size={48} color="#FFFFFF" />
-                    </LinearGradient>
+                {/* قسم الهيدر مع الشعار */}
+                <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+                    <View style={styles.logoContainer}>
+                        <Image
+                            source={NabdLogo}
+                            style={styles.logoImage}
+                            resizeMode="contain"
+                        />
+                        <View style={styles.glow} />
+                    </View>
+                    <Text style={styles.title}>NABDH <Text style={{ color: PRO_THEME.accent }}>PRO</Text></Text>
+                    <Text style={styles.subtitle}>تصفح المستقبل، اليوم.</Text>
                 </Animated.View>
 
-                {/* Title & Subtitle */}
-                <Animated.View style={{ opacity: titleOpacity }}>
-                    <Text style={[styles.title, { color: colors.text }]}>
-                        متصفح نبض
-                    </Text>
-                    <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                        تصفح العالم بأمان وسرعة ✨
-                    </Text>
-                </Animated.View>
-
-                {/* Search Bar */}
-                <Animated.View
-                    style={[
-                        styles.searchContainer,
-                        {
-                            backgroundColor: colors.backgroundDefault,
-                            borderColor: colors.border,
-                            transform: [{ translateY: searchBarSlide }],
-                        },
-                    ]}
-                >
-                    <Feather name="search" size={20} color={colors.textSecondary} />
+                {/* شريط البحث الزجاجي */}
+                <BlurView intensity={20} tint="dark" style={styles.searchContainer}>
+                    <Feather name="search" size={20} color={PRO_THEME.textSecondary} />
                     <TextInput
-                        style={[styles.searchInput, { color: colors.text }]}
+                        style={styles.input}
                         placeholder="ابحث أو اكتب عنوان URL..."
-                        placeholderTextColor={colors.textSecondary}
+                        placeholderTextColor={PRO_THEME.textSecondary}
                         onSubmitEditing={(e) => handleSearch(e.nativeEvent.text)}
                         returnKeyType="search"
-                        textAlign="right"
+                        textAlign="right" // للكتابة العربية
                     />
-                    <Pressable
-                        style={({ pressed }) => [
-                            styles.voiceButton,
-                            { backgroundColor: colors.accent, opacity: pressed ? 0.8 : 1 },
-                        ]}
-                    >
-                        <Feather name="mic" size={16} color="#FFFFFF" />
-                    </Pressable>
-                </Animated.View>
-            </LinearGradient>
+                    <View style={styles.micButton}>
+                        <Feather name="mic" size={16} color="#FFF" />
+                    </View>
+                </BlurView>
 
-            {/* Quick Shortcuts Section */}
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <Feather name="grid" size={18} color={colors.accent} />
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                        الاختصارات السريعة
-                    </Text>
-                </View>
-
-                <View style={styles.shortcutsGrid}>
+                {/* شبكة الاختصارات */}
+                <View style={styles.gridContainer}>
                     {shortcuts.map((item, index) => (
-                        <Animated.View
-                            key={item.name}
-                            style={{
-                                opacity: cardAnimations[index],
-                                transform: [
-                                    {
-                                        translateY: cardAnimations[index].interpolate({
-                                            inputRange: [0, 1],
-                                            outputRange: [30, 0],
-                                        }),
-                                    },
-                                    {
-                                        scale: cardAnimations[index].interpolate({
-                                            inputRange: [0, 1],
-                                            outputRange: [0.8, 1],
-                                        }),
-                                    },
-                                ],
-                            }}
-                        >
-                            <Pressable
-                                style={({ pressed }) => [
-                                    styles.shortcutCard,
-                                    {
-                                        backgroundColor: colors.backgroundSecondary,
-                                        borderColor: pressed ? colors.accent : colors.border,
-                                        transform: [{ scale: pressed ? 0.95 : 1 }],
-                                    },
-                                ]}
-                                onPress={() => navigateTo(item.url)}
-                            >
-                                <LinearGradient
-                                    colors={item.gradient}
-                                    style={styles.shortcutIcon}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                >
-                                    <Feather name={item.icon} size={22} color="#FFFFFF" />
-                                </LinearGradient>
-                                <Text
-                                    style={[styles.shortcutName, { color: colors.text }]}
-                                    numberOfLines={1}
-                                >
-                                    {item.nameAr}
-                                </Text>
-                            </Pressable>
-                        </Animated.View>
-                    ))}
-                </View>
-            </View>
-
-            {/* Quick Tips Section */}
-            <Animated.View
-                style={[
-                    styles.section,
-                    { transform: [{ translateX: tipSlide }] },
-                ]}
-            >
-                <View style={styles.sectionHeader}>
-                    <Feather name="info" size={18} color={colors.accent} />
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                        نصائح سريعة
-                    </Text>
-                </View>
-
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.tipsContainer}
-                >
-                    {quickTips.map((tip) => (
-                        <View
-                            key={tip.id}
-                            style={[
-                                styles.tipCard,
-                                {
-                                    backgroundColor: colors.backgroundSecondary,
-                                    borderColor: colors.border,
-                                },
+                        <Pressable
+                            key={index}
+                            onPress={() => navigateTo(item.url)}
+                            style={({ pressed }) => [
+                                styles.cardWrapper,
+                                { opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] }
                             ]}
                         >
-                            <View
-                                style={[
-                                    styles.tipIconContainer,
-                                    { backgroundColor: `${colors.accent}20` },
-                                ]}
-                            >
-                                <Feather name={tip.icon} size={20} color={colors.accent} />
-                            </View>
-                            <Text style={[styles.tipTitle, { color: colors.text }]}>
-                                {tip.title}
-                            </Text>
-                            <Text
-                                style={[styles.tipDescription, { color: colors.textSecondary }]}
-                            >
-                                {tip.description}
-                            </Text>
-                        </View>
+                            <BlurView intensity={30} tint="dark" style={styles.card}>
+                                <View style={[styles.iconBox, { backgroundColor: item.color === "#FFF" ? "rgba(255,255,255,0.1)" : `${item.color}20` }]}>
+                                    <Feather name={item.icon as any} size={24} color={item.color} />
+                                </View>
+                                <Text style={styles.cardText}>{item.name}</Text>
+                            </BlurView>
+                        </Pressable>
                     ))}
-                </ScrollView>
-            </Animated.View>
+                </View>
 
-            {/* Footer */}
-            <View style={styles.footer}>
-                <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-                    مرحباً بك في نبض 💙
-                </Text>
-                <Text style={[styles.versionText, { color: colors.textSecondary }]}>
-                    الإصدار 1.0.0
-                </Text>
-            </View>
-        </ScrollView>
+                {/* بطاقة معلومات إضافية (طقس/أخبار) */}
+                <BlurView intensity={15} tint="dark" style={styles.infoCard}>
+                    <View style={styles.infoHeader}>
+                        <Feather name="zap" size={18} color="#fbbf24" />
+                        <Text style={styles.infoTitle}>اقتراحات الذكاء الاصطناعي</Text>
+                    </View>
+                    <Text style={styles.infoDesc}>جرب استخدام ميزة التلخيص الجديدة لقراءة المقالات الطويلة في ثوانٍ.</Text>
+                </BlurView>
+
+            </ScrollView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    scrollView: {
+    container: {
         flex: 1,
     },
     scrollContent: {
-        paddingBottom: Spacing["4xl"],
+        padding: Spacing.xl,
+        paddingTop: 80,
+        alignItems: 'center',
     },
-    headerGradient: {
-        alignItems: "center",
-        paddingTop: Spacing["4xl"],
-        paddingBottom: Spacing["3xl"],
-        paddingHorizontal: Spacing.xl,
-        borderBottomLeftRadius: BorderRadius.xl,
-        borderBottomRightRadius: BorderRadius.xl,
+    header: {
+        alignItems: 'center',
+        marginBottom: 40,
     },
     logoContainer: {
-        marginBottom: Spacing.xl,
+        marginBottom: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    logoCircle: {
+    logoBg: {
+        width: 80,
+        height: 80,
+        borderRadius: 25, // شكل Squircle حديث
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2,
+    },
+    logoImage: {
         width: 100,
         height: 100,
-        borderRadius: 50,
-        alignItems: "center",
-        justifyContent: "center",
-        ...Shadows.lg,
+        zIndex: 2,
+    },
+    glow: {
+        position: 'absolute',
+        width: 90,
+        height: 90,
+        borderRadius: 30,
+        backgroundColor: PRO_THEME.accent,
+        opacity: 0.4,
+        zIndex: 1,
     },
     title: {
-        ...Typography.h1,
         fontSize: 32,
-        fontWeight: "800",
-        textAlign: "center",
-        marginBottom: Spacing.sm,
+        fontWeight: '900',
+        color: PRO_THEME.text,
+        letterSpacing: 1,
     },
     subtitle: {
-        ...Typography.body,
-        textAlign: "center",
-        marginBottom: Spacing["2xl"],
+        fontSize: 16,
+        color: PRO_THEME.textSecondary,
+        marginTop: 5,
+        fontWeight: '300',
     },
     searchContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        width: "100%",
-        maxWidth: 400,
-        height: Spacing.inputHeight + 4,
-        borderRadius: BorderRadius.lg,
-        borderWidth: 1.5,
-        paddingHorizontal: Spacing.lg,
-        gap: Spacing.md,
-        ...Shadows.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        height: 56,
+        borderRadius: 28,
+        paddingHorizontal: 20,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: PRO_THEME.border,
+        marginBottom: 40,
+        overflow: 'hidden',
     },
-    searchInput: {
+    input: {
         flex: 1,
-        fontSize: 15,
-        height: "100%",
+        color: '#FFF',
+        fontSize: 16,
+        marginHorizontal: 10,
+        height: '100%',
     },
-    voiceButton: {
+    micButton: {
         width: 32,
         height: 32,
         borderRadius: 16,
-        alignItems: "center",
-        justifyContent: "center",
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    section: {
-        paddingHorizontal: Spacing.xl,
-        marginTop: Spacing["2xl"],
+    gridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: 15,
+        width: '100%',
     },
-    sectionHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: Spacing.sm,
-        marginBottom: Spacing.lg,
+    cardWrapper: {
+        width: '30%',
+        aspectRatio: 1,
+        borderRadius: 20,
+        overflow: 'hidden',
     },
-    sectionTitle: {
-        ...Typography.h3,
-        fontWeight: "700",
-    },
-    shortcutsGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: Spacing.md,
-        justifyContent: "center",
-    },
-    shortcutCard: {
-        width: (SCREEN_WIDTH - Spacing.xl * 2 - Spacing.md * 3) / 4,
-        minWidth: 75,
-        maxWidth: 90,
-        aspectRatio: 0.85,
-        borderRadius: BorderRadius.md,
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 1.5,
-        padding: Spacing.sm,
-        ...Shadows.sm,
-    },
-    shortcutIcon: {
-        width: 44,
-        height: 44,
-        borderRadius: BorderRadius.sm,
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: Spacing.sm,
-    },
-    shortcutName: {
-        ...Typography.caption,
-        fontWeight: "600",
-        textAlign: "center",
-    },
-    tipsContainer: {
-        paddingRight: Spacing.xl,
-        gap: Spacing.md,
-    },
-    tipCard: {
-        width: 200,
-        padding: Spacing.lg,
-        borderRadius: BorderRadius.md,
+    card: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.03)',
         borderWidth: 1,
-        ...Shadows.sm,
+        borderColor: PRO_THEME.border,
     },
-    tipIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: BorderRadius.xs,
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: Spacing.md,
+    iconBox: {
+        width: 45,
+        height: 45,
+        borderRadius: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 10,
     },
-    tipTitle: {
-        ...Typography.h4,
-        marginBottom: Spacing.xs,
+    cardText: {
+        color: PRO_THEME.text,
+        fontSize: 12,
+        fontWeight: '600',
     },
-    tipDescription: {
-        ...Typography.caption,
-        lineHeight: 18,
+    infoCard: {
+        width: '100%',
+        marginTop: 40,
+        padding: 20,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: PRO_THEME.border,
+        overflow: 'hidden',
     },
-    footer: {
-        alignItems: "center",
-        marginTop: Spacing["4xl"],
-        paddingVertical: Spacing.xl,
+    infoHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 10,
     },
-    footerText: {
-        ...Typography.small,
+    infoTitle: {
+        color: PRO_THEME.text,
+        fontWeight: 'bold',
+        fontSize: 16,
     },
-    versionText: {
-        ...Typography.caption,
-        marginTop: Spacing.xs,
-        opacity: 0.7,
-    },
+    infoDesc: {
+        color: PRO_THEME.textSecondary,
+        lineHeight: 22,
+        textAlign: 'left',
+    }
 });
