@@ -1,0 +1,52 @@
+
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
+
+PS C:\Users\Aledari\Documents\GitHub\Nabd-Browser> # ادخل مجلد المشروع
+PS C:\Users\Aledari\Documents\GitHub\Nabd-Browser> cd nabdh-browser
+cd : Cannot find path 'C:\Users\Aledari\Documents\GitHub\Nabd-Browser\nabdh-browser' because it does not exist.
+At line:1 char:1
++ cd nabdh-browser
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (C:\Users\Aledar...r\nabdh-browser:String) [Set-Location], ItemNotFoundE
+   xception
+    + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.SetLocationCommand
+
+PS C:\Users\Aledari\Documents\GitHub\Nabd-Browser>
+PS C:\Users\Aledari\Documents\GitHub\Nabd-Browser> # ثبت المكتبات
+PS C:\Users\Aledari\Documents\GitHub\Nabd-Browser> npm install
+npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+
+added 1052 packages, and audited 1053 packages in 31s
+
+206 packages are looking for funding
+  run `npm fund` for details
+
+6 vulnerabilities (1 low, 4 moderate, 1 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+PS C:\Users\Aledari\Documents\GitHub\Nabd-Browser>
+PS C:\Users\Aledari\Documents\GitHub\Nabd-Browser> # سجل دخول إلى Expo
+PS C:\Users\Aledari\Documents\GitHub\Nabd-Browser> npx eas login
+npm error could not determine executable to run
+npm error A complete log of this run can be found in: C:\Users\Aledari\AppData\Local\npm-cache\_logs\2026-01-17T06_24_35_207Z-debug-0.log
+PS C:\Users\Aledari\Documents\GitHub\Nabd-Browser>
+PS C:\Users\Aledari\Documents\GitHub\Nabd-Browser> # ابنِ ملف APK
+PS C:\Users\Aledari\Documents\GitHub\Nabd-Browser> npx eas build --platform android --profile preview
+npm error could not determine executable to run
+npm error A complete log of this run can be found in: C:\Users\Aledari\AppData\Local\npm-cache\_logs\2026-01-17T06_24_51_065Z-debug-0.log
+PS C:\Users\Aledari\Documents\GitHub\Nabd-Browser>
