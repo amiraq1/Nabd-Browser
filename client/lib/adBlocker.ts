@@ -4,7 +4,7 @@
  */
 
 // قائمة المجالات المحظورة (تم توسيعها)
-const AD_DOMAINS = [
+const AD_DOMAINS: string[] = [
   // Google Ads
   "googlesyndication.com",
   "googleadservices.com",
@@ -113,12 +113,38 @@ const AD_SELECTORS = [
   '[class*="privacy-banner"]',
 ];
 
-// السكريبت الذي سيتم حقنه داخل الصفحة
-export const AD_BLOCK_SCRIPT = `
+// إحصائيات الحظر
+interface BlockStats {
+  totalBlocked: number;
+  sessionBlocked: number;
+  lastBlockedUrl: string | null;
+  lastBlockedTime: number | null;
+}
+
+let blockStats: BlockStats = {
+  totalBlocked: 0,
+  sessionBlocked: 0,
+  lastBlockedUrl: null,
+  lastBlockedTime: null,
+};
+
+// قائمة المواقع المستثناة (القائمة البيضاء)
+let whitelist: string[] = [];
+
+// المستمعون للأحداث
+type BlockEventListener = (stats: BlockStats, blockedUrl: string) => void;
+const blockListeners: BlockEventListener[] = [];
+
+/**
+ * إنشاء السكريبت مع إرسال إحصائيات للتطبيق
+ */
+export function createAdBlockScript(): string {
+  return `
 (function() {
   'use strict';
   
   const adSelectors = ${JSON.stringify(AD_SELECTORS)};
+  let blockedCount = 0;
   
   // 1. وظيفة إخفاء العناصر المزعجة
   function hideAds() {
@@ -126,14 +152,26 @@ export const AD_BLOCK_SCRIPT = `
       try {
         const elements = document.querySelectorAll(selector);
         elements.forEach(function(el) {
-          // نحذف العنصر تماماً بدلاً من إخفائه فقط لضمان عدم تأثيره على التنسيق
-          if(el.parentNode) {
-            el.parentNode.removeChild(el);
-          } else {
-            el.style.display = 'none !important';
-            el.style.visibility = 'hidden !important';
-            el.style.height = '0 !important';
-            el.style.overflow = 'hidden !important';
+          if (!el.dataset.nabdBlocked) {
+            el.dataset.nabdBlocked = 'true';
+            blockedCount++;
+            
+            // إرسال إشعار للتطبيق
+            window.ReactNativeWebView?.postMessage(JSON.stringify({
+              type: 'adBlocked',
+              selector: selector,
+              count: blockedCount
+            }));
+            
+            // نحذف العنصر تماماً
+            if(el.parentNode) {
+              el.parentNode.removeChild(el);
+            } else {
+              el.style.display = 'none !important';
+              el.style.visibility = 'hidden !important';
+              el.style.height = '0 !important';
+              el.style.overflow = 'hidden !important';
+            }
           }
         });
       } catch(e) {}
@@ -147,6 +185,12 @@ export const AD_BLOCK_SCRIPT = `
     if (event && event.isTrusted) {
       return originalOpen.call(window, url, name, features);
     }
+    blockedCount++;
+    window.ReactNativeWebView?.postMessage(JSON.stringify({
+      type: 'popupBlocked',
+      url: url,
+      count: blockedCount
+    }));
     console.log('[Nabd] Blocked popup:', url);
     return null;
   };
@@ -199,18 +243,117 @@ export const AD_BLOCK_SCRIPT = `
 })();
 true;
 `;
+}
+
+// للتوافق مع الكود القديم
+export const AD_BLOCK_SCRIPT = createAdBlockScript();
+
+/**
+ * استخراج النطاق من URL
+ */
+function extractDomain(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * التحقق مما إذا كان الموقع في القائمة البيضاء
+ */
+export function isWhitelisted(url: string): boolean {
+  const domain = extractDomain(url);
+  return whitelist.some(
+    (whitelistedDomain) =>
+      domain === whitelistedDomain || domain.endsWith(`.${whitelistedDomain}`)
+  );
+}
 
 /**
  * التحقق مما إذا كان يجب حظر الطلب
  */
-export function shouldBlockRequest(url: string): boolean {
+export function shouldBlockRequest(
+  url: string,
+  pageUrl?: string
+): { blocked: boolean; domain?: string } {
   try {
+    // تجاوز الحظر للمواقع في القائمة البيضاء
+    if (pageUrl && isWhitelisted(pageUrl)) {
+      return { blocked: false };
+    }
+
     const urlLower = url.toLowerCase();
-    // التحقق من الدومين
-    return AD_DOMAINS.some((domain) => urlLower.includes(domain));
+    const blockedDomain = AD_DOMAINS.find((domain) =>
+      urlLower.includes(domain)
+    );
+
+    if (blockedDomain) {
+      // تحديث الإحصائيات
+      blockStats.totalBlocked++;
+      blockStats.sessionBlocked++;
+      blockStats.lastBlockedUrl = url;
+      blockStats.lastBlockedTime = Date.now();
+
+      // إعلام المستمعين
+      notifyListeners(url);
+
+      return { blocked: true, domain: blockedDomain };
+    }
+
+    return { blocked: false };
   } catch {
-    return false;
+    return { blocked: false };
   }
+}
+
+/**
+ * إعلام المستمعين بحظر جديد
+ */
+function notifyListeners(blockedUrl: string) {
+  blockListeners.forEach((listener) => {
+    try {
+      listener(blockStats, blockedUrl);
+    } catch (e) {
+      console.error("[AdBlocker] Listener error:", e);
+    }
+  });
+}
+
+/**
+ * الاشتراك في أحداث الحظر
+ */
+export function onAdBlocked(listener: BlockEventListener): () => void {
+  blockListeners.push(listener);
+  // إرجاع دالة لإلغاء الاشتراك
+  return () => {
+    const index = blockListeners.indexOf(listener);
+    if (index > -1) {
+      blockListeners.splice(index, 1);
+    }
+  };
+}
+
+/**
+ * الحصول على إحصائيات الحظر
+ */
+export function getBlockStats(): BlockStats {
+  return { ...blockStats };
+}
+
+/**
+ * إعادة تعيين إحصائيات الجلسة
+ */
+export function resetSessionStats(): void {
+  blockStats.sessionBlocked = 0;
+}
+
+/**
+ * تحميل الإحصائيات الإجمالية (من التخزين)
+ */
+export function loadStats(savedStats: Partial<BlockStats>): void {
+  blockStats = { ...blockStats, ...savedStats };
 }
 
 /**
@@ -227,20 +370,82 @@ export function getAdSelectors(): string[] {
   return [...AD_SELECTORS];
 }
 
+// ============ إدارة القائمة البيضاء ============
+
+/**
+ * الحصول على القائمة البيضاء
+ */
+export function getWhitelist(): string[] {
+  return [...whitelist];
+}
+
+/**
+ * تعيين القائمة البيضاء (عند التحميل من التخزين)
+ */
+export function setWhitelist(domains: string[]): void {
+  whitelist = domains.map((d) => d.toLowerCase().replace(/^www\./, ""));
+}
+
+/**
+ * إضافة موقع للقائمة البيضاء
+ */
+export function addToWhitelist(domain: string): boolean {
+  const cleanDomain = domain.toLowerCase().replace(/^www\./, "");
+  if (!whitelist.includes(cleanDomain)) {
+    whitelist.push(cleanDomain);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * إزالة موقع من القائمة البيضاء
+ */
+export function removeFromWhitelist(domain: string): boolean {
+  const cleanDomain = domain.toLowerCase().replace(/^www\./, "");
+  const index = whitelist.indexOf(cleanDomain);
+  if (index > -1) {
+    whitelist.splice(index, 1);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * التحقق من وجود موقع في القائمة البيضاء
+ */
+export function isInWhitelist(domain: string): boolean {
+  const cleanDomain = domain.toLowerCase().replace(/^www\./, "");
+  return whitelist.includes(cleanDomain);
+}
+
+/**
+ * مسح القائمة البيضاء
+ */
+export function clearWhitelist(): void {
+  whitelist = [];
+}
+
+// ============ إدارة النطاقات المحظورة ============
+
 /**
  * إضافة نطاق جديد للحظر
  */
-export function addBlockedDomain(domain: string): void {
-  if (!AD_DOMAINS.includes(domain.toLowerCase())) {
-    AD_DOMAINS.push(domain.toLowerCase());
+export function addBlockedDomain(domain: string): boolean {
+  const cleanDomain = domain.toLowerCase();
+  if (!AD_DOMAINS.includes(cleanDomain)) {
+    AD_DOMAINS.push(cleanDomain);
+    return true;
   }
+  return false;
 }
 
 /**
  * إزالة نطاق من الحظر
  */
 export function removeBlockedDomain(domain: string): boolean {
-  const index = AD_DOMAINS.indexOf(domain.toLowerCase());
+  const cleanDomain = domain.toLowerCase();
+  const index = AD_DOMAINS.indexOf(cleanDomain);
   if (index > -1) {
     AD_DOMAINS.splice(index, 1);
     return true;

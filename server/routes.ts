@@ -2,102 +2,102 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "node:http";
 import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-});
+// إعداد العميل (سيعمل حتى لو كان المفتاح غير موجود)
+const apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+const anthropic = apiKey
+  ? new Anthropic({
+    apiKey,
+    baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+  })
+  : null;
+
+// دالة المحاكاة الذكية (للتجربة بدون مفتاح)
+function getMockResponse(
+  type: "summarize" | "explain" | "ask",
+  text: string
+): string {
+  if (type === "summarize") {
+    return (
+      "✨ **تلخيص ذكي (V2.0 Demo):**\n\n" +
+      "يستعرض هذا النص أفكاراً رئيسية حول الموضوع. في النسخة الكاملة، سيقوم الذكاء الاصطناعي بقراءة النص الفعلي وتحليله بدقة. \n\n" +
+      "• النقاط الرئيسية تظهر هنا.\n" +
+      "• الاستنتاجات تظهر هنا.\n\n" +
+      "(تم تفعيل وضع المحاكاة لعدم العثور على مفتاح API)."
+    );
+  }
+  if (type === "explain") {
+    return (
+      '💡 **شرح المصطلح:**\n\n"' +
+      text.substring(0, 30) +
+      '..."\n\n' +
+      "هذا المفهوم يشير عادةً إلى [شرح افتراضي]. في الوضع المتصل، سيتم تحليل السياق بالكامل لتقديم شرح دقيق."
+    );
+  }
+  return "🤖 هذا رد تجريبي من المساعد الذكي (V2.0) لأنك تعمل في وضع التجربة.";
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // 1. تلخيص
   app.post("/api/ai/summarize", async (req: Request, res: Response) => {
     try {
       const { content } = req.body;
-      
-      if (!content || typeof content !== "string") {
-        return res.status(400).json({ error: "Content is required" });
+      if (!content) return res.status(400).json({ error: "Content required" });
+
+      if (!anthropic) {
+        await new Promise((r) => setTimeout(r, 1500)); // تأخير جمالي
+        return res.json({ summary: getMockResponse("summarize", content) });
       }
 
-      const truncatedContent = content.slice(0, 50000);
-
       const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
+        model: "claude-3-5-sonnet-20241022",
         max_tokens: 2048,
         messages: [
-          {
-            role: "user",
-            content: `قم بتلخيص المحتوى التالي باللغة العربية بشكل واضح ومختصر:\n\n${truncatedContent}`,
-          },
+          { role: "user", content: `لخص بالعربية: ${content.slice(0, 50000)}` },
         ],
       });
-
-      const textContent = message.content[0];
-      const summary = textContent.type === "text" ? textContent.text : "";
-      
-      res.json({ summary });
+      res.json({ summary: (message.content[0] as any).text });
     } catch (error) {
-      console.error("Error summarizing:", error);
-      res.status(500).json({ error: "Failed to summarize content" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 
+  // 2. شرح
   app.post("/api/ai/explain", async (req: Request, res: Response) => {
     try {
       const { selectedText } = req.body;
-      
-      if (!selectedText || typeof selectedText !== "string") {
-        return res.status(400).json({ error: "Selected text is required" });
+      if (!anthropic) {
+        await new Promise((r) => setTimeout(r, 1000));
+        return res.json({
+          explanation: getMockResponse("explain", selectedText),
+        });
       }
-
       const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
-        max_tokens: 2048,
-        messages: [
-          {
-            role: "user",
-            content: `اشرح النص التالي بالتفصيل باللغة العربية:\n\n"${selectedText}"`,
-          },
-        ],
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1024,
+        messages: [{ role: "user", content: `اشرح بالعربية: ${selectedText}` }],
       });
-
-      const textContent = message.content[0];
-      const explanation = textContent.type === "text" ? textContent.text : "";
-      
-      res.json({ explanation });
+      res.json({ explanation: (message.content[0] as any).text });
     } catch (error) {
-      console.error("Error explaining:", error);
-      res.status(500).json({ error: "Failed to explain text" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 
+  // 3. سؤال
   app.post("/api/ai/ask", async (req: Request, res: Response) => {
     try {
-      const { question, pageContent } = req.body;
-      
-      if (!question || typeof question !== "string") {
-        return res.status(400).json({ error: "Question is required" });
+      const { question } = req.body;
+      if (!anthropic) {
+        await new Promise((r) => setTimeout(r, 1500));
+        return res.json({ answer: getMockResponse("ask", question) });
       }
-
-      const truncatedContent = pageContent ? pageContent.slice(0, 30000) : "";
-
       const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
+        model: "claude-3-5-sonnet-20241022",
         max_tokens: 2048,
-        messages: [
-          {
-            role: "user",
-            content: truncatedContent 
-              ? `بناءً على محتوى الصفحة التالي:\n\n${truncatedContent}\n\nأجب عن السؤال التالي باللغة العربية:\n${question}`
-              : `أجب عن السؤال التالي باللغة العربية:\n${question}`,
-          },
-        ],
+        messages: [{ role: "user", content: `أجب بالعربية: ${question}` }],
       });
-
-      const textContent = message.content[0];
-      const answer = textContent.type === "text" ? textContent.text : "";
-      
-      res.json({ answer });
+      res.json({ answer: (message.content[0] as any).text });
     } catch (error) {
-      console.error("Error answering:", error);
-      res.status(500).json({ error: "Failed to answer question" });
+      res.status(500).json({ error: "Failed" });
     }
   });
 

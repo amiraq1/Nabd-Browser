@@ -12,7 +12,7 @@ interface BrowserContextType {
   history: HistoryItem[];
   pageContent: string;
   selectedText: string;
-  webViewRef: React.RefObject<WebView>;
+  webViewRef: React.RefObject<WebView | null>;
   createTab: (isIncognito?: boolean) => void;
   closeTab: (id: string) => void;
   switchTab: (id: string) => void;
@@ -30,6 +30,7 @@ interface BrowserContextType {
   loadHistory: () => Promise<void>;
   extractPageContent: () => void;
   setSelectedText: (text: string) => void;
+  setPageContent: (content: string) => void;
 }
 
 const BrowserContext = createContext<BrowserContextType | undefined>(undefined);
@@ -245,6 +246,7 @@ export function BrowserProvider({ children }: { children: ReactNode }) {
         loadHistory,
         extractPageContent,
         setSelectedText,
+        setPageContent,
       }}
     >
       {children}

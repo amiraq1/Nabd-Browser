@@ -13,6 +13,7 @@ import { FAB } from "@/components/browser/FAB";
 import { TabsBottomSheet } from "@/components/browser/TabsBottomSheet";
 import { AIPanelSheet } from "@/components/browser/AIPanelSheet";
 import { DrawerMenu } from "@/components/browser/DrawerMenu";
+import { AudioPlayer } from "@/components/browser/AudioPlayer";
 import { useColors } from "@/hooks/useColors";
 import { useTheme } from "@/context/ThemeContext";
 import { Spacing } from "@/constants/theme";
@@ -114,6 +115,8 @@ export default function BrowserScreen() {
       <WebViewContainer />
 
       <NavigationBar onAIPress={handleAIOpen} />
+
+      <AudioPlayer />
 
       <FAB onTabsPress={handleTabsOpen} />
 

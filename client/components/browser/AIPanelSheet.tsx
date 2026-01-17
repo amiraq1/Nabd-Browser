@@ -34,11 +34,10 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
   function AIPanelSheet({ onClose }, ref) {
     const colors = useColors();
     const insets = useSafeAreaInsets();
-    const { extractPageContent, selectedText, webViewRef } = useBrowser();
+    const { extractPageContent, selectedText, webViewRef, pageContent } = useBrowser();
     const [messages, setMessages] = useState<AIMessage[]>([]);
     const [question, setQuestion] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [pageContent, setPageContent] = useState("");
 
     const snapPoints = useMemo(() => ["60%", "90%"], []);
 
@@ -59,6 +58,7 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
       setIsLoading(true);
 
       try {
+        // 1. طلب استخراج النص من الصفحة
         webViewRef.current?.injectJavaScript(`
           (function() {
             window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -68,17 +68,21 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
           })();
           true;
         `);
-        
-        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        // 2. انتظار قصير لضمان وصول النص وتحديث الـ State
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         let response;
         let userMessage = "";
         let assistantMessage = "";
 
+        // نستخدم pageContent الموجودة في الـ Context
+        const contentToSend = pageContent || "لا يوجد محتوى";
+
         if (action === "summarize") {
           userMessage = "تلخيص الصفحة الحالية";
           response = await apiRequest("POST", "/api/ai/summarize", {
-            content: "الرجاء تلخيص هذه الصفحة",
+            content: contentToSend,
           });
           const data = await response.json();
           assistantMessage = data.summary || "لم أتمكن من تلخيص الصفحة";
@@ -99,15 +103,19 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
           userMessage = `شرح: "${selectedText}"`;
           response = await apiRequest("POST", "/api/ai/explain", {
             selectedText,
+            pageContext: contentToSend,
           });
           const data = await response.json();
           assistantMessage = data.explanation || "لم أتمكن من شرح النص";
         } else if (action === "ask") {
-          if (!question.trim()) return;
+          if (!question.trim()) {
+            setIsLoading(false);
+            return;
+          }
           userMessage = question;
           response = await apiRequest("POST", "/api/ai/ask", {
             question,
-            pageContent: "",
+            pageContent: contentToSend,
           });
           const data = await response.json();
           assistantMessage = data.answer || "لم أتمكن من الإجابة";
