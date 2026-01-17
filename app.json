@@ -38,17 +38,7 @@
           }
         }
       ],
-      "expo-web-browser",
-      [
-        "expo-font",
-        {
-          "fonts": [
-            "./assets/fonts/Tajawal-Regular.ttf",
-            "./assets/fonts/Tajawal-Bold.ttf",
-            "./assets/fonts/Tajawal-Medium.ttf"
-          ]
-        }
-      ]
+      "expo-web-browser"
     ],
     "experiments": {
       "reactCompiler": true
