@@ -1,5 +1,13 @@
 import React from "react";
-import { View, StyleSheet, Pressable, Modal, Platform, Alert, ToastAndroid } from "react-native";
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  Modal,
+  Platform,
+  Alert,
+  ToastAndroid,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
@@ -16,7 +24,9 @@ import { getAutoFillScript } from "@/lib/autoFill";
 interface DrawerMenuProps {
   visible: boolean;
   onClose: () => void;
-  onNavigate: (screen: "bookmarks" | "history" | "downloads" | "settings") => void;
+  onNavigate: (
+    screen: "bookmarks" | "history" | "downloads" | "settings",
+  ) => void;
 }
 
 interface MenuItemProps {
@@ -58,8 +68,14 @@ export function DrawerMenu({ visible, onClose, onNavigate }: DrawerMenuProps) {
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { settings } = useSettings();
-  const { isCurrentPageBookmarked, addBookmark, removeBookmark, activeTab, bookmarks, webViewRef } =
-    useBrowser();
+  const {
+    isCurrentPageBookmarked,
+    addBookmark,
+    removeBookmark,
+    activeTab,
+    bookmarks,
+    webViewRef,
+  } = useBrowser();
 
   const isBookmarked = isCurrentPageBookmarked();
 
@@ -104,7 +120,12 @@ export function DrawerMenu({ visible, onClose, onNavigate }: DrawerMenuProps) {
   const renderDrawerContent = () => (
     <>
       <View style={styles.header}>
-        <View style={[styles.logoContainer, { backgroundColor: `${colors.accent}20` }]}>
+        <View
+          style={[
+            styles.logoContainer,
+            { backgroundColor: `${colors.accent}20` },
+          ]}
+        >
           <Feather name="activity" size={28} color={colors.accent} />
         </View>
         <ThemedText type="h2" style={[styles.appName, { color: colors.text }]}>
@@ -194,15 +215,15 @@ export function DrawerMenu({ visible, onClose, onNavigate }: DrawerMenuProps) {
         ]}
       >
         {Platform.OS === "ios" ? (
-          <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill}>
-            <View style={styles.drawerContent}>
-              {renderDrawerContent()}
-            </View>
+          <BlurView
+            intensity={80}
+            tint={isDark ? "dark" : "light"}
+            style={StyleSheet.absoluteFill}
+          >
+            <View style={styles.drawerContent}>{renderDrawerContent()}</View>
           </BlurView>
         ) : (
-          <View style={styles.drawerContent}>
-            {renderDrawerContent()}
-          </View>
+          <View style={styles.drawerContent}>{renderDrawerContent()}</View>
         )}
       </Animated.View>
     </Modal>

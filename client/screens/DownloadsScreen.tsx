@@ -1,5 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, StyleSheet, FlatList, Pressable, Linking, Platform } from "react-native";
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  Pressable,
+  Linking,
+  Platform,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
@@ -18,9 +25,14 @@ interface DownloadItemRowProps {
   index: number;
 }
 
-function DownloadItemRow({ item, onPress, onDelete, index }: DownloadItemRowProps) {
+function DownloadItemRow({
+  item,
+  onPress,
+  onDelete,
+  index,
+}: DownloadItemRowProps) {
   const colors = useColors();
-  
+
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -59,7 +71,9 @@ function DownloadItemRow({ item, onPress, onDelete, index }: DownloadItemRowProp
           pressed && { backgroundColor: colors.backgroundSecondary },
         ]}
       >
-        <View style={[styles.fileIcon, { backgroundColor: `${colors.accent}15` }]}>
+        <View
+          style={[styles.fileIcon, { backgroundColor: `${colors.accent}15` }]}
+        >
           <Feather
             name={getFileIcon(item.mimeType)}
             size={22}
@@ -67,14 +81,21 @@ function DownloadItemRow({ item, onPress, onDelete, index }: DownloadItemRowProp
           />
         </View>
         <View style={styles.itemContent}>
-          <ThemedText numberOfLines={1} style={[styles.itemTitle, { color: colors.text }]}>
+          <ThemedText
+            numberOfLines={1}
+            style={[styles.itemTitle, { color: colors.text }]}
+          >
             {item.filename}
           </ThemedText>
           <View style={styles.itemMeta}>
-            <ThemedText style={[styles.itemSize, { color: colors.textSecondary }]}>
+            <ThemedText
+              style={[styles.itemSize, { color: colors.textSecondary }]}
+            >
               {formatSize(item.fileSize)}
             </ThemedText>
-            <ThemedText style={[styles.itemDate, { color: colors.textSecondary }]}>
+            <ThemedText
+              style={[styles.itemDate, { color: colors.textSecondary }]}
+            >
               {formatDate(item.downloadedAt)}
             </ThemedText>
           </View>
@@ -96,10 +117,12 @@ function DownloadItemRow({ item, onPress, onDelete, index }: DownloadItemRowProp
 
 function EmptyState() {
   const colors = useColors();
-  
+
   return (
     <View style={styles.emptyContainer}>
-      <View style={[styles.emptyIcon, { backgroundColor: `${colors.accent}15` }]}>
+      <View
+        style={[styles.emptyIcon, { backgroundColor: `${colors.accent}15` }]}
+      >
         <Feather name="download" size={64} color={colors.accent} />
       </View>
       <ThemedText type="h3" style={[styles.emptyTitle, { color: colors.text }]}>
@@ -127,10 +150,13 @@ export default function DownloadsScreen() {
     loadDownloads();
   }, [loadDownloads]);
 
-  const handleDelete = useCallback(async (id: string) => {
-    await downloadStorage.remove(id);
-    loadDownloads();
-  }, [loadDownloads]);
+  const handleDelete = useCallback(
+    async (id: string) => {
+      await downloadStorage.remove(id);
+      loadDownloads();
+    },
+    [loadDownloads],
+  );
 
   const handleOpen = useCallback((url: string) => {
     if (Platform.OS !== "web") {
@@ -147,11 +173,13 @@ export default function DownloadsScreen() {
         index={index}
       />
     ),
-    [handleOpen, handleDelete]
+    [handleOpen, handleDelete],
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.backgroundRoot }]}>
+    <View
+      style={[styles.container, { backgroundColor: colors.backgroundRoot }]}
+    >
       <FlatList
         data={downloads}
         renderItem={renderItem}

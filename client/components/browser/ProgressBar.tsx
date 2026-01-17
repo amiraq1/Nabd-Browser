@@ -29,7 +29,7 @@ export function ProgressBar({ isLoading, progress }: ProgressBarProps) {
     } else {
       width.value = withSequence(
         withTiming(100, { duration: 100 }),
-        withTiming(100, { duration: 200 })
+        withTiming(100, { duration: 200 }),
       );
       opacity.value = withTiming(0, { duration: 300 });
     }
@@ -42,7 +42,9 @@ export function ProgressBar({ isLoading, progress }: ProgressBarProps) {
 
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.bar, { backgroundColor: colors.accent }, animatedStyle]} />
+      <Animated.View
+        style={[styles.bar, { backgroundColor: colors.accent }, animatedStyle]}
+      />
     </View>
   );
 }

@@ -10,6 +10,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { ThemedText } from "@/components/ThemedText";
 import { useColors } from "@/hooks/useColors";
 import { Spacing, BorderRadius } from "@/constants/theme";
@@ -25,17 +26,20 @@ interface TabCardProps {
   index: number;
 }
 
-export function TabCard({ tab, isActive, onPress, onClose, index }: TabCardProps) {
+export function TabCard({
+  tab,
+  isActive,
+  onPress,
+  onClose,
+  index,
+}: TabCardProps) {
   const colors = useColors();
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: scale.value },
-      { translateX: translateX.value },
-    ],
+    transform: [{ scale: scale.value }, { translateX: translateX.value }],
     opacity: opacity.value,
   }));
 
@@ -78,8 +82,8 @@ export function TabCard({ tab, isActive, onPress, onClose, index }: TabCardProps
   const borderColor = isActive
     ? colors.accent
     : tab.isIncognito
-    ? colors.incognitoAccent
-    : colors.border;
+      ? colors.incognitoAccent
+      : colors.border;
 
   const getDomain = (url: string) => {
     try {
@@ -89,13 +93,20 @@ export function TabCard({ tab, isActive, onPress, onClose, index }: TabCardProps
     }
   };
 
+  // ✅ استخدام Google Favicon Kit لجلب الأيقونات
+  const faviconUrl = `https://www.google.com/s2/favicons?domain=${getDomain(tab.url)}&sz=64`;
+
   return (
     <Animated.View entering={FadeIn.delay(index * 50).duration(200)}>
       <GestureDetector gesture={swipeGesture}>
         <AnimatedPressable
           onPress={handlePress}
-          onPressIn={() => (scale.value = withSpring(0.97))}
-          onPressOut={() => (scale.value = withSpring(1))}
+          onPressIn={() =>
+            (scale.value = withSpring(0.95, { damping: 10, stiffness: 300 }))
+          }
+          onPressOut={() =>
+            (scale.value = withSpring(1, { damping: 10, stiffness: 300 }))
+          }
           style={[
             styles.container,
             { backgroundColor, borderColor },
@@ -103,7 +114,12 @@ export function TabCard({ tab, isActive, onPress, onClose, index }: TabCardProps
           ]}
         >
           <View style={styles.header}>
-            <View style={[styles.iconContainer, { backgroundColor: colors.backgroundTertiary }]}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: colors.backgroundTertiary },
+              ]}
+            >
               {tab.isIncognito ? (
                 <Feather
                   name="eye-off"
@@ -111,13 +127,23 @@ export function TabCard({ tab, isActive, onPress, onClose, index }: TabCardProps
                   color={colors.incognitoAccent}
                 />
               ) : (
-                <Feather name="globe" size={12} color={colors.textSecondary} />
+                // ✅ استخدام expo-image
+                <Image
+                  source={{ uri: faviconUrl }}
+                  style={{ width: 16, height: 16 }}
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
+                  transition={200}
+                />
               )}
             </View>
             <Pressable
               onPress={handleClose}
               hitSlop={8}
-              style={[styles.closeButton, { backgroundColor: colors.backgroundTertiary }]}
+              style={[
+                styles.closeButton,
+                { backgroundColor: colors.backgroundTertiary },
+              ]}
             >
               <Feather name="x" size={14} color={colors.textSecondary} />
             </Pressable>
@@ -133,12 +159,20 @@ export function TabCard({ tab, isActive, onPress, onClose, index }: TabCardProps
             >
               {tab.title}
             </ThemedText>
-            <ThemedText numberOfLines={1} style={[styles.url, { color: colors.textSecondary }]}>
+            <ThemedText
+              numberOfLines={1}
+              style={[styles.url, { color: colors.textSecondary }]}
+            >
               {getDomain(tab.url)}
             </ThemedText>
           </View>
           {isActive ? (
-            <View style={[styles.activeIndicator, { backgroundColor: colors.accent }]} />
+            <View
+              style={[
+                styles.activeIndicator,
+                { backgroundColor: colors.accent },
+              ]}
+            />
           ) : null}
         </AnimatedPressable>
       </GestureDetector>

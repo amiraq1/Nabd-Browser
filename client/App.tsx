@@ -31,7 +31,7 @@ if (Platform.OS !== "web") {
 
 function AppContent() {
   const { isDark } = useTheme();
-  
+
   return (
     <>
       <NavigationContainer>

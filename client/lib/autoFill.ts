@@ -10,7 +10,10 @@ interface UserProfile {
   address: string;
 }
 
-export function getAutoFillScript(profile: UserProfile, loginCredentials?: { username?: string, password?: string }): string {
+export function getAutoFillScript(
+  profile: UserProfile,
+  loginCredentials?: { username?: string; password?: string },
+): string {
   // نقوم بترميز البيانات لتجنب مشاكل علامات التنصيص
   const data = JSON.stringify(profile);
   const credentials = JSON.stringify(loginCredentials || {});

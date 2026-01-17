@@ -75,7 +75,7 @@ const defaultSettings: Settings = {
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
-  undefined
+  undefined,
 );
 
 const SETTINGS_STORAGE_KEY = "@nabdh_settings_v2";
@@ -103,7 +103,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
         // تحميل القائمة البيضاء
         const storedWhitelist = await AsyncStorage.getItem(
-          WHITELIST_STORAGE_KEY
+          WHITELIST_STORAGE_KEY,
         );
         if (storedWhitelist) {
           const parsed = JSON.parse(storedWhitelist);
@@ -133,7 +133,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     try {
       await AsyncStorage.setItem(
         SETTINGS_STORAGE_KEY,
-        JSON.stringify(newSettings)
+        JSON.stringify(newSettings),
       );
     } catch (e) {
       console.error("[Settings] Save error:", e);
@@ -147,7 +147,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setSettings(newSettings);
       await saveSettings(newSettings);
     },
-    [settings]
+    [settings],
   );
 
   // Toggle functions
@@ -194,7 +194,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWhitelistState(newList);
       await AsyncStorage.setItem(
         WHITELIST_STORAGE_KEY,
-        JSON.stringify(newList)
+        JSON.stringify(newList),
       );
     }
   }, []);
@@ -206,7 +206,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWhitelistState(newList);
       await AsyncStorage.setItem(
         WHITELIST_STORAGE_KEY,
-        JSON.stringify(newList)
+        JSON.stringify(newList),
       );
     }
   }, []);
@@ -220,7 +220,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       };
       AsyncStorage.setItem(
         BLOCK_STATS_STORAGE_KEY,
-        JSON.stringify({ totalBlocked: newStats.totalBlocked })
+        JSON.stringify({ totalBlocked: newStats.totalBlocked }),
       );
       return newStats;
     });
@@ -232,7 +232,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     resetSessionStats();
     await AsyncStorage.setItem(
       BLOCK_STATS_STORAGE_KEY,
-      JSON.stringify({ totalBlocked: 0 })
+      JSON.stringify({ totalBlocked: 0 }),
     );
   }, []);
 

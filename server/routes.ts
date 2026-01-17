@@ -6,15 +6,15 @@ import Anthropic from "@anthropic-ai/sdk";
 const apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
 const anthropic = apiKey
   ? new Anthropic({
-    apiKey,
-    baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-  })
+      apiKey,
+      baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+    })
   : null;
 
 // دالة المحاكاة الذكية (للتجربة بدون مفتاح)
 function getMockResponse(
   type: "summarize" | "explain" | "ask" | "translate",
-  text: string
+  text: string,
 ): string {
   if (type === "summarize") {
     return (
@@ -35,9 +35,11 @@ function getMockResponse(
   }
   if (type === "translate") {
     return (
-      '🌍 **ترجمة:**\n\n' +
-      '"' + text.substring(0, 50) + '..."\n\n' +
-      'الترجمة الافتراضية تظهر هنا. (وضع المحاكاة)'
+      "🌍 **ترجمة:**\n\n" +
+      '"' +
+      text.substring(0, 50) +
+      '..."\n\n' +
+      "الترجمة الافتراضية تظهر هنا. (وضع المحاكاة)"
     );
   }
   return "🤖 هذا رد تجريبي من المساعد الذكي (V2.0) لأنك تعمل في وضع التجربة.";
@@ -95,15 +97,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { selectedText, targetLang } = req.body; // targetLang default 'ar'
       if (!anthropic) {
         await new Promise((r) => setTimeout(r, 1000));
-        return res.json({ translation: getMockResponse("translate", selectedText) });
+        return res.json({
+          translation: getMockResponse("translate", selectedText),
+        });
       }
 
-      const lang = targetLang === 'en' ? 'الإنجليزية' : 'العربية';
+      const lang = targetLang === "en" ? "الإنجليزية" : "العربية";
 
       const message = await anthropic.messages.create({
         model: "claude-3-5-sonnet-20241022",
         max_tokens: 2048,
-        messages: [{ role: "user", content: `ترجم النص التالي إلى ${lang} بدقة مع الحفاظ على التنسيق:\n\n${selectedText}` }],
+        messages: [
+          {
+            role: "user",
+            content: `ترجم النص التالي إلى ${lang} بدقة مع الحفاظ على التنسيق:\n\n${selectedText}`,
+          },
+        ],
       });
       res.json({ translation: (message.content[0] as any).text });
     } catch (error) {

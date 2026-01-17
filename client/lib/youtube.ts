@@ -29,7 +29,6 @@ export const YOUTUBE_SCRIPT = `
             const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .videoAdUiSkipButton');
             if (skipBtn) {
                 skipBtn.click();
-                console.log('Auto skipped ad');
             }
             
             // إغلاق الإعلانات المنبثقة فوق الفيديو

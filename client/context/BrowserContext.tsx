@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  ReactNode,
+} from "react";
 import { WebView } from "react-native-webview";
 import type { BrowserTab, Bookmark, HistoryItem } from "@/types/browser";
 import { bookmarkStorage, historyStorage } from "@/lib/storage";
@@ -114,33 +122,36 @@ export function BrowserProvider({ children }: { children: ReactNode }) {
     setActiveTabId(newTab.id);
   }, []);
 
-  const closeTab = useCallback((id: string) => {
-    setTabs((prev) => {
-      const filtered = prev.filter((t) => t.id !== id);
-      if (filtered.length === 0) {
-        const newTab: BrowserTab = {
-          id: generateId(),
-          url: HOME_URL,
-          title: "الصفحة الرئيسية",
-          favicon: null,
-          isIncognito: false,
-          isLoading: false,
-          canGoBack: false,
-          canGoForward: false,
-        };
-        setActiveTabId(newTab.id);
-        return [newTab];
-      }
-      return filtered;
-    });
-    setActiveTabId((currentId) => {
-      if (currentId === id) {
-        const currentTabs = tabs.filter((t) => t.id !== id);
-        return currentTabs.length > 0 ? currentTabs[0].id : "";
-      }
-      return currentId;
-    });
-  }, [tabs]);
+  const closeTab = useCallback(
+    (id: string) => {
+      setTabs((prev) => {
+        const filtered = prev.filter((t) => t.id !== id);
+        if (filtered.length === 0) {
+          const newTab: BrowserTab = {
+            id: generateId(),
+            url: HOME_URL,
+            title: "الصفحة الرئيسية",
+            favicon: null,
+            isIncognito: false,
+            isLoading: false,
+            canGoBack: false,
+            canGoForward: false,
+          };
+          setActiveTabId(newTab.id);
+          return [newTab];
+        }
+        return filtered;
+      });
+      setActiveTabId((currentId) => {
+        if (currentId === id) {
+          const currentTabs = tabs.filter((t) => t.id !== id);
+          return currentTabs.length > 0 ? currentTabs[0].id : "";
+        }
+        return currentId;
+      });
+    },
+    [tabs],
+  );
 
   const switchTab = useCallback((id: string) => {
     setActiveTabId(id);
@@ -150,16 +161,19 @@ export function BrowserProvider({ children }: { children: ReactNode }) {
 
   const updateTab = useCallback((id: string, updates: Partial<BrowserTab>) => {
     setTabs((prev) =>
-      prev.map((tab) => (tab.id === id ? { ...tab, ...updates } : tab))
+      prev.map((tab) => (tab.id === id ? { ...tab, ...updates } : tab)),
     );
   }, []);
 
-  const navigateTo = useCallback((input: string) => {
-    const url = formatUrl(input);
-    if (activeTabId) {
-      updateTab(activeTabId, { url, isLoading: true });
-    }
-  }, [activeTabId, updateTab]);
+  const navigateTo = useCallback(
+    (input: string) => {
+      const url = formatUrl(input);
+      if (activeTabId) {
+        updateTab(activeTabId, { url, isLoading: true });
+      }
+    },
+    [activeTabId, updateTab],
+  );
 
   const goBack = useCallback(() => {
     webViewRef.current?.goBack();
@@ -190,10 +204,13 @@ export function BrowserProvider({ children }: { children: ReactNode }) {
     await loadBookmarks();
   }, [activeTab, loadBookmarks]);
 
-  const removeBookmark = useCallback(async (id: string) => {
-    await bookmarkStorage.remove(id);
-    await loadBookmarks();
-  }, [loadBookmarks]);
+  const removeBookmark = useCallback(
+    async (id: string) => {
+      await bookmarkStorage.remove(id);
+      await loadBookmarks();
+    },
+    [loadBookmarks],
+  );
 
   const isCurrentPageBookmarked = useCallback(() => {
     if (!activeTab) return false;

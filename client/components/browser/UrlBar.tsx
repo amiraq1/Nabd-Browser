@@ -110,7 +110,11 @@ export function UrlBar() {
         onPress={handleSubmit}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={[styles.goButton, { backgroundColor: colors.accent }, animatedStyle]}
+        style={[
+          styles.goButton,
+          { backgroundColor: colors.accent },
+          animatedStyle,
+        ]}
       >
         <Feather name="arrow-left" size={20} color={colors.buttonText} />
       </AnimatedPressable>
@@ -119,19 +123,19 @@ export function UrlBar() {
 
   if (Platform.OS === "ios" && !isIncognitoMode) {
     return (
-      <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={[styles.container, { backgroundColor: "transparent" }]}>
-        <View style={styles.innerContainer}>
-          {renderContent()}
-        </View>
+      <BlurView
+        intensity={80}
+        tint={isDark ? "dark" : "light"}
+        style={[styles.container, { backgroundColor: "transparent" }]}
+      >
+        <View style={styles.innerContainer}>{renderContent()}</View>
       </BlurView>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      <View style={styles.innerContainer}>
-        {renderContent()}
-      </View>
+      <View style={styles.innerContainer}>{renderContent()}</View>
     </View>
   );
 }

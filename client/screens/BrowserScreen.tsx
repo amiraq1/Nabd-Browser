@@ -70,7 +70,7 @@ export default function BrowserScreen() {
           break;
       }
     },
-    [navigation]
+    [navigation],
   );
 
   const backgroundColor = isIncognitoMode
@@ -92,13 +92,21 @@ export default function BrowserScreen() {
         </View>
 
         {/* زر القارئ الصوتي */}
-        <Pressable onPress={handleAudioOpen} hitSlop={8} style={styles.tabsButton}>
+        <Pressable
+          onPress={handleAudioOpen}
+          hitSlop={8}
+          style={styles.tabsButton}
+        >
           <View style={{ marginRight: 8 }}>
             <Feather name="headphones" size={20} color={colors.text} />
           </View>
         </Pressable>
 
-        <Pressable onPress={handleTabsOpen} hitSlop={8} style={styles.tabsButton}>
+        <Pressable
+          onPress={handleTabsOpen}
+          hitSlop={8}
+          style={styles.tabsButton}
+        >
           <View style={[styles.tabsCount, { borderColor: colors.text }]}>
             <Feather name="layers" size={18} color={colors.text} />
           </View>
@@ -108,14 +116,20 @@ export default function BrowserScreen() {
 
     if (Platform.OS === "ios" && !isIncognitoMode) {
       return (
-        <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={styles.header}>
+        <BlurView
+          intensity={80}
+          tint={isDark ? "dark" : "light"}
+          style={styles.header}
+        >
           {headerContent}
         </BlurView>
       );
     }
 
     return (
-      <View style={[styles.header, { backgroundColor: colors.backgroundDefault }]}>
+      <View
+        style={[styles.header, { backgroundColor: colors.backgroundDefault }]}
+      >
         {headerContent}
       </View>
     );
@@ -141,7 +155,10 @@ export default function BrowserScreen() {
 
       <TabsBottomSheet ref={tabsSheetRef} onClose={handleTabsClose} />
       <AIPanelSheet ref={aiSheetRef} onClose={handleAIClose} />
-      <AudioReaderSheet ref={audioSheetRef} onClose={() => audioSheetRef.current?.close()} />
+      <AudioReaderSheet
+        ref={audioSheetRef}
+        onClose={() => audioSheetRef.current?.close()}
+      />
     </View>
   );
 }

@@ -141,8 +141,10 @@ export const Fonts = Platform.select({
   },
   web: {
     sans: "Tajawal, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-    sansBold: "Tajawal, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-    sansMedium: "Tajawal, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    sansBold:
+      "Tajawal, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    sansMedium:
+      "Tajawal, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   },
 });
 

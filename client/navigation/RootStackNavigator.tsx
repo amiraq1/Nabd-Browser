@@ -27,18 +27,26 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const LoadingFallback = () => {
   const colors = useColors();
   return (
-    <View style={{ flex: 1, backgroundColor: colors.backgroundRoot, justifyContent: 'center', alignItems: 'center' }}>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.backgroundRoot,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
       <ActivityIndicator size="large" color={colors.accent} />
     </View>
   );
 };
 
 // تغليف المكونات الكسولة بـ Suspense
-const LazyScreen = (Component: React.LazyExoticComponent<any>) => (props: any) => (
-  <Suspense fallback={<LoadingFallback />}>
-    <Component {...props} />
-  </Suspense>
-);
+const LazyScreen =
+  (Component: React.LazyExoticComponent<any>) => (props: any) => (
+    <Suspense fallback={<LoadingFallback />}>
+      <Component {...props} />
+    </Suspense>
+  );
 
 export default function RootStackNavigator() {
   const colors = useColors();
@@ -47,14 +55,17 @@ export default function RootStackNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{
-        ...screenOptions,
+        headerShown: false,
+        animation: "fade_from_bottom", // انتقال سلس وعصري مدعوم أصلياً
+        gestureEnabled: true,
+        gestureDirection: "horizontal",
+        contentStyle: {
+          backgroundColor: "transparent", // يمنع الوميض
+        },
         headerStyle: {
           backgroundColor: colors.backgroundDefault,
         },
         headerTintColor: colors.text,
-        contentStyle: {
-          backgroundColor: colors.backgroundRoot,
-        },
       }}
     >
       <Stack.Screen

@@ -13,16 +13,28 @@ interface NavigationBarProps {
   onAIPress: () => void;
 }
 
-export function NavigationBar({ onMenuPress, onTabsPress, onAIPress }: NavigationBarProps) {
+export function NavigationBar({
+  onMenuPress,
+  onTabsPress,
+  onAIPress,
+}: NavigationBarProps) {
   const colors = useColors();
   const { goBack, goForward, activeTab } = useBrowser();
 
   return (
     <View style={styles.wrapper}>
       {/* الخلفية الزجاجية للشريط */}
-      <BlurView intensity={Platform.OS === 'ios' ? 80 : 100} tint="dark" style={styles.blurContainer}>
-        <View style={[styles.container, { backgroundColor: colors.backgroundSecondary + 'CC' }]}>
-
+      <BlurView
+        intensity={Platform.OS === "ios" ? 80 : 100}
+        tint="dark"
+        style={styles.blurContainer}
+      >
+        <View
+          style={[
+            styles.container,
+            { backgroundColor: colors.backgroundSecondary + "CC" },
+          ]}
+        >
           {/* الجانب الأيمن: الرجوع والتقدم */}
           <View style={styles.sideGroup}>
             <Pressable
@@ -30,7 +42,7 @@ export function NavigationBar({ onMenuPress, onTabsPress, onAIPress }: Navigatio
               disabled={!activeTab?.canGoBack}
               style={({ pressed }) => [
                 styles.iconBtn,
-                { opacity: !activeTab?.canGoBack ? 0.3 : pressed ? 0.5 : 1 }
+                { opacity: !activeTab?.canGoBack ? 0.3 : pressed ? 0.5 : 1 },
               ]}
             >
               <Feather name="chevron-right" size={24} color={colors.text} />
@@ -41,7 +53,7 @@ export function NavigationBar({ onMenuPress, onTabsPress, onAIPress }: Navigatio
               disabled={!activeTab?.canGoForward}
               style={({ pressed }) => [
                 styles.iconBtn,
-                { opacity: !activeTab?.canGoForward ? 0.3 : pressed ? 0.5 : 1 }
+                { opacity: !activeTab?.canGoForward ? 0.3 : pressed ? 0.5 : 1 },
               ]}
             >
               <Feather name="chevron-left" size={24} color={colors.text} />
@@ -57,7 +69,10 @@ export function NavigationBar({ onMenuPress, onTabsPress, onAIPress }: Navigatio
           <View style={styles.sideGroup}>
             <Pressable
               onPress={onTabsPress}
-              style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                { opacity: pressed ? 0.5 : 1 },
+              ]}
             >
               <View style={styles.tabIcon}>
                 <Feather name="layers" size={22} color={colors.text} />
@@ -67,12 +82,14 @@ export function NavigationBar({ onMenuPress, onTabsPress, onAIPress }: Navigatio
 
             <Pressable
               onPress={onMenuPress}
-              style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                { opacity: pressed ? 0.5 : 1 },
+              ]}
             >
               <Feather name="grid" size={22} color={colors.text} />
             </Pressable>
           </View>
-
         </View>
       </BlurView>
     </View>
@@ -81,13 +98,13 @@ export function NavigationBar({ onMenuPress, onTabsPress, onAIPress }: Navigatio
 
 const styles = StyleSheet.create({
   wrapper: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
   },
   blurContainer: {
-    width: '100%',
+    width: "100%",
   },
   container: {
     flexDirection: "row",
@@ -97,28 +114,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingBottom: 20,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopColor: "rgba(255,255,255,0.1)",
   },
   sideGroup: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 20,
-    alignItems: 'center',
-    width: '35%',
-    justifyContent: 'space-around',
+    alignItems: "center",
+    width: "35%",
+    justifyContent: "space-around",
   },
   centerButtonContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     zIndex: 10,
-    marginTop: -40
+    marginTop: -40,
   },
   iconBtn: {
     padding: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   tabIcon: {
-    position: 'relative',
-  }
+    position: "relative",
+  },
 });

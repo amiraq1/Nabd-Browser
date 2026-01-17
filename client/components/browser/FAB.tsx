@@ -67,7 +67,9 @@ export function FAB({ onTabsPress }: FABProps) {
         ]}
       >
         <View style={[styles.tabCount, { borderColor: colors.buttonText }]}>
-          <ThemedText style={[styles.tabCountText, { color: colors.buttonText }]}>
+          <ThemedText
+            style={[styles.tabCountText, { color: colors.buttonText }]}
+          >
             {tabs.length}
           </ThemedText>
         </View>
@@ -89,11 +91,11 @@ export function FAB({ onTabsPress }: FABProps) {
         <Animated.View
           entering={FadeIn.duration(150)}
           style={[
-            styles.menu, 
-            { 
+            styles.menu,
+            {
               bottom: bottomOffset + Spacing.fabSize + Spacing.sm,
               backgroundColor: colors.backgroundDefault,
-            }
+            },
           ]}
         >
           <Pressable
@@ -105,12 +107,11 @@ export function FAB({ onTabsPress }: FABProps) {
               تبويب جديد
             </ThemedText>
           </Pressable>
-          <Pressable
-            onPress={() => handleNewTab(true)}
-            style={styles.menuItem}
-          >
+          <Pressable onPress={() => handleNewTab(true)} style={styles.menuItem}>
             <Feather name="eye-off" size={20} color={colors.incognitoAccent} />
-            <ThemedText style={[styles.menuText, { color: colors.incognitoAccent }]}>
+            <ThemedText
+              style={[styles.menuText, { color: colors.incognitoAccent }]}
+            >
               تصفح خفي
             </ThemedText>
           </Pressable>

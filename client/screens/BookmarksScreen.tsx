@@ -1,5 +1,5 @@
-import React, { useCallback } from "react";
-import { View, StyleSheet, FlatList, Pressable } from "react-native";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
+import { View, StyleSheet, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
@@ -13,6 +13,9 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
 import type { Bookmark } from "@/types/browser";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
+import { FlashList } from "@shopify/flash-list";
+import { Image } from "expo-image";
+import { Skeleton } from "@/components/ui/Skeleton"; // Import Skeleton
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -23,65 +26,89 @@ interface BookmarkItemProps {
   index: number;
 }
 
-function BookmarkItem({ item, onPress, onDelete, index }: BookmarkItemProps) {
-  const colors = useColors();
-  
-  const getDomain = (url: string) => {
-    try {
-      return new URL(url).hostname;
-    } catch {
-      return url;
-    }
-  };
+const BookmarkItem = React.memo(
+  function BookmarkItem({ item, onPress, onDelete, index }: BookmarkItemProps) {
+    const colors = useColors();
 
-  return (
-    <Animated.View
-      entering={FadeInRight.delay(index * 50).duration(200)}
-      exiting={FadeOutLeft.duration(150)}
-    >
-      <Pressable
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onPress();
-        }}
-        style={({ pressed }) => [
-          styles.item,
-          { backgroundColor: colors.backgroundDefault },
-          pressed && { backgroundColor: colors.backgroundSecondary },
-        ]}
+    const domain = useMemo(() => {
+      try {
+        return new URL(item.url).hostname;
+      } catch {
+        return item.url;
+      }
+    }, [item.url]);
+
+    const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+
+    return (
+      <Animated.View
+        entering={FadeInRight.delay(Math.min(index * 50, 300)).duration(200)}
+        exiting={FadeOutLeft.duration(150)}
       >
-        <View style={[styles.favicon, { backgroundColor: colors.backgroundSecondary }]}>
-          <Feather name="globe" size={20} color={colors.textSecondary} />
-        </View>
-        <View style={styles.itemContent}>
-          <ThemedText numberOfLines={1} style={[styles.itemTitle, { color: colors.text }]}>
-            {item.title}
-          </ThemedText>
-          <ThemedText numberOfLines={1} style={[styles.itemUrl, { color: colors.textSecondary }]}>
-            {getDomain(item.url)}
-          </ThemedText>
-        </View>
         <Pressable
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            onDelete();
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onPress();
           }}
-          hitSlop={12}
-          style={styles.deleteButton}
+          style={({ pressed }) => [
+            styles.item,
+            { backgroundColor: colors.backgroundDefault },
+            pressed && { backgroundColor: colors.backgroundSecondary },
+          ]}
         >
-          <Feather name="trash-2" size={18} color={colors.error} />
+          <View
+            style={[
+              styles.favicon,
+              { backgroundColor: colors.backgroundSecondary },
+            ]}
+          >
+            <Image
+              source={{ uri: faviconUrl }}
+              style={{ width: 24, height: 24 }}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              transition={200}
+            />
+          </View>
+          <View style={styles.itemContent}>
+            <ThemedText
+              numberOfLines={1}
+              style={[styles.itemTitle, { color: colors.text }]}
+            >
+              {item.title}
+            </ThemedText>
+            <ThemedText
+              numberOfLines={1}
+              style={[styles.itemUrl, { color: colors.textSecondary }]}
+            >
+              {domain}
+            </ThemedText>
+          </View>
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              onDelete();
+            }}
+            hitSlop={12}
+            style={styles.deleteButton}
+          >
+            <Feather name="trash-2" size={18} color={colors.error} />
+          </Pressable>
         </Pressable>
-      </Pressable>
-    </Animated.View>
-  );
-}
+      </Animated.View>
+    );
+  },
+  (prev, next) => prev.item.id === next.item.id && prev.index === next.index,
+);
 
 function EmptyState() {
   const colors = useColors();
-  
+
   return (
     <View style={styles.emptyContainer}>
-      <View style={[styles.emptyIcon, { backgroundColor: `${colors.accent}15` }]}>
+      <View
+        style={[styles.emptyIcon, { backgroundColor: `${colors.accent}15` }]}
+      >
         <Feather name="bookmark" size={64} color={colors.accent} />
       </View>
       <ThemedText type="h3" style={[styles.emptyTitle, { color: colors.text }]}>
@@ -101,12 +128,19 @@ export default function BookmarksScreen() {
   const insets = useSafeAreaInsets();
   const { bookmarks, removeBookmark, navigateTo } = useBrowser();
 
+  // حالة التحميل والمحاكاة
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleBookmarkPress = useCallback(
     (url: string) => {
       navigateTo(url);
       navigation.goBack();
     },
-    [navigateTo, navigation]
+    [navigateTo, navigation],
   );
 
   const renderItem = useCallback(
@@ -118,25 +152,69 @@ export default function BookmarksScreen() {
         index={index}
       />
     ),
-    [handleBookmarkPress, removeBookmark]
+    [handleBookmarkPress, removeBookmark],
   );
 
+  // 👇 Skeleton Loader للمفضلة
+  if (isLoading) {
+    return (
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.backgroundRoot,
+            padding: Spacing.lg,
+            paddingTop: headerHeight + Spacing.lg,
+          },
+        ]}
+      >
+        {[1, 2, 3, 4].map((i) => (
+          <View
+            key={i}
+            style={[
+              styles.item,
+              {
+                backgroundColor: colors.backgroundDefault,
+                marginBottom: Spacing.sm,
+              },
+            ]}
+          >
+            <Skeleton width={40} height={40} borderRadius={20} />
+            <View
+              style={{
+                flex: 1,
+                marginRight: Spacing.sm,
+                alignItems: "flex-end",
+                paddingVertical: 4,
+                gap: 8,
+              }}
+            >
+              <Skeleton width="50%" height={16} />
+              <Skeleton width="30%" height={12} />
+            </View>
+            <Skeleton width={20} height={20} borderRadius={4} />
+          </View>
+        ))}
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.backgroundRoot }]}>
-      <FlatList
+    <View
+      style={[styles.container, { backgroundColor: colors.backgroundRoot }]}
+    >
+      <FlashList
         data={bookmarks}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.list,
-          {
-            paddingTop: headerHeight + Spacing.lg,
-            paddingBottom: insets.bottom + Spacing.lg,
-          },
-          bookmarks.length === 0 && styles.emptyList,
-        ]}
+        contentContainerStyle={{
+          paddingTop: headerHeight + Spacing.lg,
+          paddingBottom: insets.bottom + Spacing.lg,
+          paddingHorizontal: Spacing.lg,
+        }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={EmptyState}
+        estimatedItemSize={80}
       />
     </View>
   );
@@ -145,9 +223,6 @@ export default function BookmarksScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  list: {
-    paddingHorizontal: Spacing.lg,
   },
   emptyList: {
     flex: 1,
@@ -167,6 +242,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginLeft: Spacing.md,
+    overflow: "hidden",
   },
   itemContent: {
     flex: 1,

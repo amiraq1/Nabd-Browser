@@ -21,6 +21,7 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
 import { apiRequest } from "@/lib/query-client";
 import type { AIMessage, AIAction } from "@/types/browser";
+import { ScaleButton } from "@/components/ui/ScaleButton"; // ✅ Import ScaleButton
 
 interface AIPanelSheetProps {
   onClose: () => void;
@@ -34,7 +35,8 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
   function AIPanelSheet({ onClose }, ref) {
     const colors = useColors();
     const insets = useSafeAreaInsets();
-    const { extractPageContent, selectedText, webViewRef, pageContent } = useBrowser();
+    const { extractPageContent, selectedText, webViewRef, pageContent } =
+      useBrowser();
     const [messages, setMessages] = useState<AIMessage[]>([]);
     const [question, setQuestion] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -50,7 +52,7 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
           opacity={0.7}
         />
       ),
-      []
+      [],
     );
 
     const handleAction = async (action: AIAction) => {
@@ -58,21 +60,19 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
       setIsLoading(true);
 
       try {
-        // نستخدم pageContent الموجودة تلقائياً في الـ Context بدلاً من إعادة طلبها
         const contentToSend = pageContent || "";
-
         let response;
         let userMessage = "";
         let assistantMessage = "";
 
-        // التحقق من وجود محتوى قبل الإرسال (إلا في حالة الأسئلة العامة)
         if (!contentToSend && action !== "ask") {
           setMessages((prev) => [
             ...prev,
             {
               id: generateId(),
               role: "assistant",
-              content: "عذراً، لم يتم تحميل محتوى الصفحة بعد. يرجى الانتظار قليلاً.",
+              content:
+                "عذراً، لم يتم تحميل محتوى الصفحة بعد. يرجى الانتظار قليلاً.",
               timestamp: Date.now(),
             },
           ]);
@@ -94,7 +94,8 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
               {
                 id: generateId(),
                 role: "assistant",
-                content: "الرجاء تحديد نص أولاً لشرحه (اضغط مطولاً على أي كلمة في الصفحة)",
+                content:
+                  "الرجاء تحديد نص أولاً لشرحه (اضغط مطولاً على أي كلمة في الصفحة)",
                 timestamp: Date.now(),
               },
             ]);
@@ -123,14 +124,12 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
             return;
           }
           userMessage = `ترجمة: "${selectedText.slice(0, 50)}..."`;
-          // نرسل طلب الترجمة. (يمكننا إضافة خيار للغة لاحقاً، حالياً العربية افتراضياً)
           response = await apiRequest("POST", "/api/ai/translate", {
             selectedText,
-            targetLang: "ar"
+            targetLang: "ar",
           });
           const data = await response.json();
           assistantMessage = data.translation || "عذراً، فشلت الترجمة.";
-
         } else if (action === "ask") {
           if (!question.trim()) {
             setIsLoading(false);
@@ -167,7 +166,8 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
           {
             id: generateId(),
             role: "assistant",
-            content: "حدث خطأ في الاتصال بالذكاء الاصطناعي. الرجاء التحقق من الإنترنت.",
+            content:
+              "حدث خطأ في الاتصال بالذكاء الاصطناعي. الرجاء التحقق من الإنترنت.",
             timestamp: Date.now(),
           },
         ]);
@@ -190,19 +190,33 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
         snapPoints={snapPoints}
         enablePanDownToClose
         backdropComponent={renderBackdrop}
-        backgroundStyle={[styles.background, { backgroundColor: colors.backgroundRoot }]}
-        handleIndicatorStyle={[styles.indicator, { backgroundColor: colors.textSecondary }]}
+        backgroundStyle={[
+          styles.background,
+          { backgroundColor: colors.backgroundRoot },
+        ]}
+        handleIndicatorStyle={[
+          styles.indicator,
+          { backgroundColor: colors.textSecondary },
+        ]}
         onClose={onClose}
         keyboardBehavior="extend"
       >
         <BottomSheetView
-          style={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}
+          style={[
+            styles.content,
+            { paddingBottom: insets.bottom + Spacing.lg },
+          ]}
         >
           <View style={styles.header}>
-            <View style={[styles.aiLogo, { backgroundColor: `${colors.accent}20` }]}>
+            <View
+              style={[styles.aiLogo, { backgroundColor: `${colors.accent}20` }]}
+            >
               <Feather name="cpu" size={20} color={colors.accent} />
             </View>
-            <ThemedText type="h3" style={[styles.title, { color: colors.text }]}>
+            <ThemedText
+              type="h3"
+              style={[styles.title, { color: colors.text }]}
+            >
               AI
             </ThemedText>
             <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
@@ -212,24 +226,35 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
 
           {messages.length === 0 ? (
             <View style={styles.actionButtons}>
-              <Pressable
+              {/* ✅ استخدام ScaleButton */}
+              <ScaleButton
                 onPress={() => handleAction("summarize")}
-                style={[styles.actionButton, { backgroundColor: colors.backgroundDefault, borderColor: colors.border }]}
-                disabled={isLoading}
+                style={[
+                  styles.actionButton,
+                  {
+                    backgroundColor: colors.backgroundDefault,
+                    borderColor: colors.border,
+                  },
+                ]}
               >
                 <Feather name="file-text" size={24} color={colors.accent} />
-                <ThemedText style={[styles.actionText, { color: colors.text }]}>تلخيص الصفحة</ThemedText>
-              </Pressable>
+                <ThemedText style={[styles.actionText, { color: colors.text }]}>
+                  تلخيص الصفحة
+                </ThemedText>
+              </ScaleButton>
 
               <View style={styles.actionButtonsRow}>
-                <Pressable
-                  onPress={() => handleAction("explain")}
+                <ScaleButton
+                  onPress={() => selectedText && handleAction("explain")}
                   style={[
                     styles.actionButton,
-                    { backgroundColor: colors.backgroundDefault, borderColor: colors.border, flex: 1 },
+                    {
+                      backgroundColor: colors.backgroundDefault,
+                      borderColor: colors.border,
+                      flex: 1,
+                    },
                     !selectedText && styles.actionButtonDisabled,
                   ]}
-                  disabled={isLoading || !selectedText}
                 >
                   <Feather
                     name="help-circle"
@@ -239,21 +264,28 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
                   <ThemedText
                     style={[
                       styles.actionText,
-                      { color: selectedText ? colors.text : colors.textSecondary },
+                      {
+                        color: selectedText
+                          ? colors.text
+                          : colors.textSecondary,
+                      },
                     ]}
                   >
                     شرح
                   </ThemedText>
-                </Pressable>
+                </ScaleButton>
 
-                <Pressable
-                  onPress={() => handleAction("translate")}
+                <ScaleButton
+                  onPress={() => selectedText && handleAction("translate")}
                   style={[
                     styles.actionButton,
-                    { backgroundColor: colors.backgroundDefault, borderColor: colors.border, flex: 1 },
+                    {
+                      backgroundColor: colors.backgroundDefault,
+                      borderColor: colors.border,
+                      flex: 1,
+                    },
                     !selectedText && styles.actionButtonDisabled,
                   ]}
-                  disabled={isLoading || !selectedText}
                 >
                   <Feather
                     name="globe"
@@ -263,22 +295,37 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
                   <ThemedText
                     style={[
                       styles.actionText,
-                      { color: selectedText ? colors.text : colors.textSecondary },
+                      {
+                        color: selectedText
+                          ? colors.text
+                          : colors.textSecondary,
+                      },
                     ]}
                   >
                     ترجمة
                   </ThemedText>
-                </Pressable>
+                </ScaleButton>
               </View>
 
-              <Pressable
+              <ScaleButton
                 onPress={() => handleAction("ask")}
-                style={[styles.actionButton, { backgroundColor: colors.backgroundDefault, borderColor: colors.border }]}
-                disabled={isLoading}
+                style={[
+                  styles.actionButton,
+                  {
+                    backgroundColor: colors.backgroundDefault,
+                    borderColor: colors.border,
+                  },
+                ]}
               >
-                <Feather name="message-circle" size={24} color={colors.accent} />
-                <ThemedText style={[styles.actionText, { color: colors.text }]}>سؤال عن الصفحة</ThemedText>
-              </Pressable>
+                <Feather
+                  name="message-circle"
+                  size={24}
+                  color={colors.accent}
+                />
+                <ThemedText style={[styles.actionText, { color: colors.text }]}>
+                  سؤال عن الصفحة
+                </ThemedText>
+              </ScaleButton>
             </View>
           ) : (
             <ScrollView
@@ -294,13 +341,19 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
                     styles.messageBubble,
                     msg.role === "user"
                       ? [styles.userMessage, { backgroundColor: colors.accent }]
-                      : [styles.assistantMessage, { backgroundColor: colors.backgroundSecondary }],
+                      : [
+                          styles.assistantMessage,
+                          { backgroundColor: colors.backgroundSecondary },
+                        ],
                   ]}
                 >
                   <ThemedText
                     style={[
                       styles.messageText,
-                      { color: msg.role === "user" ? colors.buttonText : colors.text },
+                      {
+                        color:
+                          msg.role === "user" ? colors.buttonText : colors.text,
+                      },
                     ]}
                   >
                     {msg.content}
@@ -310,7 +363,12 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
               {isLoading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator color={colors.accent} size="small" />
-                  <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
+                  <ThemedText
+                    style={[
+                      styles.loadingText,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
                     جاري التفكير...
                   </ThemedText>
                 </View>
@@ -320,7 +378,13 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
 
           <View style={styles.inputContainer}>
             <TextInput
-              style={[styles.input, { backgroundColor: colors.backgroundSecondary, color: colors.text }]}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.backgroundSecondary,
+                  color: colors.text,
+                },
+              ]}
               value={question}
               onChangeText={setQuestion}
               placeholder="اسأل عن أي شيء..."
@@ -329,25 +393,32 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
               returnKeyType="send"
               multiline
             />
-            <Pressable
+            {/* استخدام ScaleButton لزر الإرسال أيضاً */}
+            <ScaleButton
               onPress={handleSendQuestion}
               style={[
                 styles.sendButton,
-                { backgroundColor: question.trim() ? colors.accent : colors.backgroundSecondary },
+                {
+                  backgroundColor: question.trim()
+                    ? colors.accent
+                    : colors.backgroundSecondary,
+                },
               ]}
-              disabled={!question.trim() || isLoading}
+              scaleTo={0.8}
             >
               <Feather
                 name="send"
                 size={20}
-                color={question.trim() ? colors.buttonText : colors.textSecondary}
+                color={
+                  question.trim() ? colors.buttonText : colors.textSecondary
+                }
               />
-            </Pressable>
+            </ScaleButton>
           </View>
         </BottomSheetView>
       </BottomSheet>
     );
-  }
+  },
 );
 
 const styles = StyleSheet.create({
@@ -387,8 +458,8 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
   },
   actionButtonsRow: {
-    flexDirection: 'row',
-    gap: Spacing.md
+    flexDirection: "row",
+    gap: Spacing.md,
   },
   actionButton: {
     flexDirection: "row",

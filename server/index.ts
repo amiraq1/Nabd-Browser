@@ -176,7 +176,8 @@ function configureExpoAndLanding(app: express.Application) {
   try {
     landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
   } catch (e) {
-    landingPageTemplate = "<html><body><h1>Nabd Browser API Server</h1></body></html>";
+    landingPageTemplate =
+      "<html><body><h1>Nabd Browser API Server</h1></body></html>";
   }
 
   const appName = getAppName();

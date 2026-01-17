@@ -103,7 +103,7 @@ export function WebViewContainer() {
     loadHistory,
     // 👇 إضافة الدوال المهمة لاستقبال البيانات
     setSelectedText,
-    setPageContent
+    setPageContent,
   } = useBrowser();
 
   const [progress, setProgress] = useState(0);
@@ -134,14 +134,14 @@ export function WebViewContainer() {
         }
       }
     },
-    [activeTabId, updateTab, isIncognitoMode, loadHistory]
+    [activeTabId, updateTab, isIncognitoMode, loadHistory],
   );
 
   const handleLoadProgress = useCallback(
     ({ nativeEvent }: { nativeEvent: { progress: number } }) => {
       setProgress(nativeEvent.progress);
     },
-    []
+    [],
   );
 
   // 👇 تحديث دالة معالجة الرسائل القادمة من الموقع
@@ -152,7 +152,6 @@ export function WebViewContainer() {
 
         // 1. حالة تحديد نص (Selection)
         if (data.type === "selection") {
-          // console.log("تم تحديد نص:", data.text); 
           setSelectedText(data.text);
         }
 
@@ -173,7 +172,7 @@ export function WebViewContainer() {
         }
 
         // 4. رسائل التنبيه (Toasts)
-        if (data.type === 'toast') {
+        if (data.type === "toast") {
           // يمكن إضافة ToastAndroid.show هنا إذا أردت
         }
       } catch (e) {
@@ -185,14 +184,15 @@ export function WebViewContainer() {
       setPageContent,
       incrementBlockCount,
       settings.showBlockNotifications,
-      blockStats.sessionBlocked
-    ]
+      blockStats.sessionBlocked,
+    ],
   );
 
   const handleShouldStartLoad = useCallback(
     (event: { url: string }) => {
       // 1. منع فتح التطبيقات الخارجية
-      const isHttp = event.url.startsWith("http://") || event.url.startsWith("https://");
+      const isHttp =
+        event.url.startsWith("http://") || event.url.startsWith("https://");
       const isAbout = event.url.startsWith("about:");
 
       if (!isHttp && !isAbout) {
@@ -230,11 +230,15 @@ export function WebViewContainer() {
       activeTab?.url,
       incrementBlockCount,
       blockStats.sessionBlocked,
-    ]
+    ],
   );
 
   if (!activeTab) {
-    return <View style={[styles.container, { backgroundColor: colors.backgroundRoot }]} />;
+    return (
+      <View
+        style={[styles.container, { backgroundColor: colors.backgroundRoot }]}
+      />
+    );
   }
 
   const backgroundColor = isIncognitoMode
@@ -316,6 +320,12 @@ export function WebViewContainer() {
           cacheEnabled={!isIncognitoMode && !settings.dataSaverEnabled}
           injectedJavaScript={injectedJS}
           mediaPlaybackRequiresUserAction={settings.dataSaverEnabled}
+          // 🔥 إصلاح مشكلة تسجيل دخول جوجل: استخدام هوية Chrome رسمية
+          userAgent="Mozilla/5.0 (Linux; Android 10; Android SDK built for x86) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36"
+          // إعدادات إضافية للتوافق
+          setSupportMultipleWindows={false} // تجنب فتح نوافذ جديدة تفصل الجلسة
+          originWhitelist={["*"]}
+          allowsInlineMediaPlayback={true}
           // تفعيل القوائم المنسدلة وتحديد النصوص بشكل أفضل
           overScrollMode="content"
         />

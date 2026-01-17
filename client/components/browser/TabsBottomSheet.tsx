@@ -1,5 +1,11 @@
 import React, { useCallback, useMemo, forwardRef } from "react";
-import { View, StyleSheet, Pressable, FlatList, useWindowDimensions } from "react-native";
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  FlatList,
+  useWindowDimensions,
+} from "react-native";
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetView,
@@ -35,7 +41,7 @@ export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
           opacity={0.7}
         />
       ),
-      []
+      [],
     );
 
     const handleTabPress = (tabId: string) => {
@@ -65,7 +71,7 @@ export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
           />
         </View>
       ),
-      [activeTabId, cardWidth]
+      [activeTabId, cardWidth],
     );
 
     return (
@@ -75,19 +81,33 @@ export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
         snapPoints={snapPoints}
         enablePanDownToClose
         backdropComponent={renderBackdrop}
-        backgroundStyle={[styles.background, { backgroundColor: colors.backgroundRoot }]}
-        handleIndicatorStyle={[styles.indicator, { backgroundColor: colors.textSecondary }]}
+        backgroundStyle={[
+          styles.background,
+          { backgroundColor: colors.backgroundRoot },
+        ]}
+        handleIndicatorStyle={[
+          styles.indicator,
+          { backgroundColor: colors.textSecondary },
+        ]}
         onClose={onClose}
       >
         <BottomSheetView
-          style={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}
+          style={[
+            styles.content,
+            { paddingBottom: insets.bottom + Spacing.lg },
+          ]}
         >
           <View style={styles.header}>
-            <ThemedText type="h3" style={[styles.title, { color: colors.text }]}>
+            <ThemedText
+              type="h3"
+              style={[styles.title, { color: colors.text }]}
+            >
               التبويبات
             </ThemedText>
             <View style={[styles.tabCount, { backgroundColor: colors.accent }]}>
-              <ThemedText style={[styles.tabCountText, { color: colors.buttonText }]}>
+              <ThemedText
+                style={[styles.tabCountText, { color: colors.buttonText }]}
+              >
                 {tabs.length}
               </ThemedText>
             </View>
@@ -100,8 +120,11 @@ export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
             <Pressable
               onPress={() => handleNewTab(false)}
               style={[
-                styles.newTabButton, 
-                { backgroundColor: colors.backgroundDefault, borderColor: colors.border }
+                styles.newTabButton,
+                {
+                  backgroundColor: colors.backgroundDefault,
+                  borderColor: colors.border,
+                },
               ]}
             >
               <Feather name="plus" size={20} color={colors.accent} />
@@ -112,13 +135,19 @@ export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
             <Pressable
               onPress={() => handleNewTab(true)}
               style={[
-                styles.newTabButton, 
+                styles.newTabButton,
                 styles.incognitoButton,
-                { borderColor: colors.incognitoAccent }
+                { borderColor: colors.incognitoAccent },
               ]}
             >
-              <Feather name="eye-off" size={20} color={colors.incognitoAccent} />
-              <ThemedText style={[styles.newTabText, { color: colors.incognitoAccent }]}>
+              <Feather
+                name="eye-off"
+                size={20}
+                color={colors.incognitoAccent}
+              />
+              <ThemedText
+                style={[styles.newTabText, { color: colors.incognitoAccent }]}
+              >
                 تصفح خفي
               </ThemedText>
             </Pressable>
@@ -136,7 +165,7 @@ export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
         </BottomSheetView>
       </BottomSheet>
     );
-  }
+  },
 );
 
 const styles = StyleSheet.create({

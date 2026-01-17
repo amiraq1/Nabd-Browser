@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo } from "react";
-import { View, StyleSheet, FlatList, Pressable, Alert } from "react-native";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
+import { View, StyleSheet, Pressable, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
@@ -13,6 +13,9 @@ import { Spacing, BorderRadius } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
 import type { HistoryItem } from "@/types/browser";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
+import { FlashList } from "@shopify/flash-list";
+import { Image } from "expo-image";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -22,64 +25,92 @@ interface HistoryItemRowProps {
   index: number;
 }
 
-// ✅ 1. استخدام React.memo لتحسين الأداء
-const HistoryItemRow = React.memo(function HistoryItemRow({ item, onPress, index }: HistoryItemRowProps) {
-  const colors = useColors();
+const HistoryItemRow = React.memo(
+  function HistoryItemRow({ item, onPress, index }: HistoryItemRowProps) {
+    const colors = useColors();
 
-  const getDomain = (url: string) => {
-    try {
-      return new URL(url).hostname;
-    } catch {
-      return url;
-    }
-  };
+    const domain = useMemo(() => {
+      try {
+        return new URL(item.url).hostname;
+      } catch {
+        return "";
+      }
+    }, [item.url]);
 
-  const formatTime = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString("ar-SA", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+    const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
-  return (
-    <Animated.View entering={FadeInRight.delay(Math.min(index * 30, 300)).duration(200)}>
-      <Pressable
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onPress();
-        }}
-        style={({ pressed }) => [
-          styles.item,
-          { backgroundColor: colors.backgroundDefault },
-          pressed && { backgroundColor: colors.backgroundSecondary },
-        ]}
+    const formatTime = (timestamp: number) => {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString("ar-SA", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    return (
+      <Animated.View
+        entering={FadeInRight.delay(Math.min(index * 30, 300)).duration(200)}
       >
-        <View style={[styles.favicon, { backgroundColor: colors.backgroundSecondary }]}>
-          <Feather name="globe" size={18} color={colors.textSecondary} />
-        </View>
-        <View style={styles.itemContent}>
-          <ThemedText numberOfLines={1} style={[styles.itemTitle, { color: colors.text }]}>
-            {item.title}
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onPress();
+          }}
+          style={({ pressed }) => [
+            styles.item,
+            { backgroundColor: colors.backgroundDefault },
+            pressed && { backgroundColor: colors.backgroundSecondary },
+          ]}
+        >
+          <View
+            style={[
+              styles.faviconContainer,
+              { backgroundColor: colors.backgroundSecondary },
+            ]}
+          >
+            <Image
+              source={{ uri: faviconUrl }}
+              style={styles.faviconImage}
+              contentFit="contain"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
+          </View>
+
+          <View style={styles.itemContent}>
+            <ThemedText
+              numberOfLines={1}
+              style={[styles.itemTitle, { color: colors.text }]}
+            >
+              {item.title}
+            </ThemedText>
+            <ThemedText
+              numberOfLines={1}
+              style={[styles.itemUrl, { color: colors.textSecondary }]}
+            >
+              {domain || item.url}
+            </ThemedText>
+          </View>
+          <ThemedText
+            style={[styles.timestamp, { color: colors.textSecondary }]}
+          >
+            {formatTime(item.visitedAt)}
           </ThemedText>
-          <ThemedText numberOfLines={1} style={[styles.itemUrl, { color: colors.textSecondary }]}>
-            {getDomain(item.url)}
-          </ThemedText>
-        </View>
-        <ThemedText style={[styles.timestamp, { color: colors.textSecondary }]}>
-          {formatTime(item.visitedAt)}
-        </ThemedText>
-      </Pressable>
-    </Animated.View>
-  );
-}, (prev, next) => prev.item.id === next.item.id && prev.index === next.index);
+        </Pressable>
+      </Animated.View>
+    );
+  },
+  (prev, next) => prev.item.id === next.item.id && prev.index === next.index,
+);
 
 function EmptyState() {
   const colors = useColors();
 
   return (
     <View style={styles.emptyContainer}>
-      <View style={[styles.emptyIcon, { backgroundColor: `${colors.accent}15` }]}>
+      <View
+        style={[styles.emptyIcon, { backgroundColor: `${colors.accent}15` }]}
+      >
         <Feather name="clock" size={64} color={colors.accent} />
       </View>
       <ThemedText type="h3" style={[styles.emptyTitle, { color: colors.text }]}>
@@ -104,6 +135,15 @@ export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const { history, clearHistory, navigateTo } = useBrowser();
 
+  // حالة التحميل (للعرض فقط حالياً)
+  const [isLoading, setIsLoading] = useState(true);
+
+  // محاكاة التحميل
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
   const groupedHistory = useMemo(() => {
     const groups: Record<string, HistoryItem[]> = {};
     history.forEach((item) => {
@@ -122,21 +162,17 @@ export default function HistoryScreen() {
   }, [history]);
 
   const handleClearHistory = useCallback(() => {
-    Alert.alert(
-      "مسح السجل",
-      "هل أنت متأكد من مسح كل السجل؟",
-      [
-        { text: "إلغاء", style: "cancel" },
-        {
-          text: "مسح",
-          style: "destructive",
-          onPress: () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            clearHistory();
-          },
+    Alert.alert("مسح السجل", "هل أنت متأكد من مسح كل السجل؟", [
+      { text: "إلغاء", style: "cancel" },
+      {
+        text: "مسح",
+        style: "destructive",
+        onPress: () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          clearHistory();
         },
-      ]
-    );
+      },
+    ]);
   }, [clearHistory]);
 
   const handleHistoryPress = useCallback(
@@ -144,24 +180,28 @@ export default function HistoryScreen() {
       navigateTo(url);
       navigation.goBack();
     },
-    [navigateTo, navigation]
+    [navigateTo, navigation],
   );
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () =>
-        history.length > 0 ? (
+        !isLoading && history.length > 0 ? (
           <Pressable onPress={handleClearHistory} hitSlop={12}>
-            <ThemedText style={[styles.clearButton, { color: colors.error }]}>مسح الكل</ThemedText>
+            <ThemedText style={[styles.clearButton, { color: colors.error }]}>
+              مسح الكل
+            </ThemedText>
           </Pressable>
         ) : null,
     });
-  }, [navigation, history.length, handleClearHistory, colors]);
+  }, [navigation, history.length, handleClearHistory, colors, isLoading]);
 
   const renderSection = useCallback(
     ({ item: group }: { item: GroupedHistory }) => (
       <View style={styles.section}>
-        <ThemedText style={[styles.sectionHeader, { color: colors.accent }]}>{group.date}</ThemedText>
+        <ThemedText style={[styles.sectionHeader, { color: colors.accent }]}>
+          {group.date}
+        </ThemedText>
         {group.items.map((item, index) => (
           <HistoryItemRow
             key={item.id}
@@ -172,32 +212,76 @@ export default function HistoryScreen() {
         ))}
       </View>
     ),
-    [handleHistoryPress, colors]
+    [handleHistoryPress, colors],
   );
 
+  // 👇 عرض الـ Skeleton Loader أثناء التحميل
+  if (isLoading) {
+    return (
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.backgroundRoot,
+            padding: Spacing.lg,
+            paddingTop: headerHeight + Spacing.lg,
+          },
+        ]}
+      >
+        <View style={{ marginBottom: Spacing.xl }}>
+          <Skeleton
+            width={120}
+            height={20}
+            style={{ marginBottom: Spacing.md, alignSelf: "flex-end" }}
+          />
+          {[1, 2, 3, 4, 5].map((i) => (
+            <View
+              key={i}
+              style={[
+                styles.item,
+                {
+                  backgroundColor: colors.backgroundDefault,
+                  marginBottom: Spacing.sm,
+                },
+              ]}
+            >
+              <Skeleton width={36} height={36} borderRadius={18} />
+              <View
+                style={{
+                  flex: 1,
+                  marginRight: Spacing.sm,
+                  alignItems: "flex-end",
+                  paddingVertical: 4,
+                  gap: 8,
+                }}
+              >
+                <Skeleton width="70%" height={14} />
+                <Skeleton width="40%" height={10} />
+              </View>
+              <Skeleton width={40} height={10} />
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.backgroundRoot }]}>
-      <FlatList
+    <View
+      style={[styles.container, { backgroundColor: colors.backgroundRoot }]}
+    >
+      <FlashList
         data={groupedHistory}
         renderItem={renderSection}
         keyExtractor={(item) => item.date}
-        contentContainerStyle={[
-          styles.list,
-          {
-            paddingTop: headerHeight + Spacing.lg,
-            paddingBottom: insets.bottom + Spacing.lg,
-          },
-          history.length === 0 && styles.emptyList,
-        ]}
+        contentContainerStyle={{
+          paddingTop: headerHeight + Spacing.lg,
+          paddingBottom: insets.bottom + Spacing.lg,
+          paddingHorizontal: Spacing.lg,
+        }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={EmptyState}
-
-        // ✅ 2. إعدادات الأداء (Performance Props)
-        initialNumToRender={5}
-        maxToRenderPerBatch={5}
-        windowSize={3}
-        removeClippedSubviews={true} // لأداء أفضل على Android
-        updateCellsBatchingPeriod={50}
+        estimatedItemSize={100}
       />
     </View>
   );
@@ -206,9 +290,6 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  list: {
-    paddingHorizontal: Spacing.lg,
   },
   emptyList: {
     flex: 1,
@@ -230,13 +311,18 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     marginBottom: Spacing.xs,
   },
-  favicon: {
+  faviconContainer: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: Spacing.sm,
+    overflow: "hidden",
+  },
+  faviconImage: {
+    width: 24,
+    height: 24,
   },
   itemContent: {
     flex: 1,
