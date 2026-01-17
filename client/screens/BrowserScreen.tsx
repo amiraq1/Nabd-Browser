@@ -116,9 +116,10 @@ export default function BrowserScreen() {
 
       <NavigationBar onAIPress={handleAIOpen} />
 
-      <AudioPlayer />
-
       <FAB onTabsPress={handleTabsOpen} />
+
+      {/* المشغل الذكي الجديد */}
+      <AudioPlayer />
 
       <DrawerMenu
         visible={drawerVisible}

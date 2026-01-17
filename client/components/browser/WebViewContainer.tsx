@@ -245,10 +245,10 @@ export function WebViewContainer() {
       
       // استخراج عند التحميل
       if (document.readyState === 'complete') {
-        setTimeout(extractPageContent, 500);
+        setTimeout(extractPageContent, 1000);
       } else {
         window.addEventListener('load', function() {
-          setTimeout(extractPageContent, 500);
+          setTimeout(extractPageContent, 1000);
         });
       }
       

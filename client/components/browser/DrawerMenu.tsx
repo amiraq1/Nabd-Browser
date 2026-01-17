@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, Pressable, Modal, Platform } from "react-native";
+import { View, StyleSheet, Pressable, Modal, Platform, Alert, ToastAndroid } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
@@ -8,8 +8,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/ThemedText";
 import { useColors } from "@/hooks/useColors";
 import { useTheme } from "@/context/ThemeContext";
+import { useSettings } from "@/context/SettingsContext";
 import { Spacing, BorderRadius } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
+import { getAutoFillScript } from "@/lib/autoFill";
 
 interface DrawerMenuProps {
   visible: boolean;
@@ -27,7 +29,7 @@ interface MenuItemProps {
 
 function MenuItem({ icon, label, onPress, color, index }: MenuItemProps) {
   const colors = useColors();
-  
+
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
@@ -55,10 +57,37 @@ export function DrawerMenu({ visible, onClose, onNavigate }: DrawerMenuProps) {
   const colors = useColors();
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { isCurrentPageBookmarked, addBookmark, removeBookmark, activeTab, bookmarks } =
+  const { settings } = useSettings();
+  const { isCurrentPageBookmarked, addBookmark, removeBookmark, activeTab, bookmarks, webViewRef } =
     useBrowser();
 
   const isBookmarked = isCurrentPageBookmarked();
+
+  // دالة عرض Toast
+  const showToast = (message: string) => {
+    if (Platform.OS === "android") {
+      ToastAndroid.show(message, ToastAndroid.SHORT);
+    } else {
+      Alert.alert("", message);
+    }
+  };
+
+  // دالة التعبئة التلقائية
+  const handleAutoFill = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    const { userProfile } = settings;
+    if (!userProfile.fullName && !userProfile.email && !userProfile.phone) {
+      showToast("يرجى إضافة بياناتك في الإعدادات أولاً 📝");
+      onClose();
+      onNavigate("settings");
+      return;
+    }
+
+    const script = getAutoFillScript(userProfile);
+    webViewRef.current?.injectJavaScript(script);
+    onClose();
+  };
 
   const handleBookmarkToggle = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -118,6 +147,13 @@ export function DrawerMenu({ visible, onClose, onNavigate }: DrawerMenuProps) {
           }}
           index={3}
         />
+        <MenuItem
+          icon="edit-3"
+          label="تعبئة تلقائية ⚡"
+          onPress={handleAutoFill}
+          color={colors.accent}
+          index={4}
+        />
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <MenuItem
           icon="settings"
@@ -126,7 +162,7 @@ export function DrawerMenu({ visible, onClose, onNavigate }: DrawerMenuProps) {
             onClose();
             onNavigate("settings");
           }}
-          index={4}
+          index={5}
         />
       </View>
     </>
@@ -149,8 +185,8 @@ export function DrawerMenu({ visible, onClose, onNavigate }: DrawerMenuProps) {
         entering={SlideInLeft.duration(200)}
         style={[
           styles.drawer,
-          { 
-            paddingTop: insets.top + Spacing.lg, 
+          {
+            paddingTop: insets.top + Spacing.lg,
             paddingBottom: insets.bottom,
             backgroundColor: colors.backgroundRoot,
             borderLeftColor: colors.border,

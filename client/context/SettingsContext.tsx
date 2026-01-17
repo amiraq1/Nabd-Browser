@@ -12,10 +12,16 @@ import {
   getWhitelist,
   addToWhitelist,
   removeFromWhitelist,
-  getBlockStats,
-  loadStats,
   resetSessionStats,
 } from "@/lib/adBlocker";
+
+// تعريف شكل بيانات الملف الشخصي (للتعبئة التلقائية)
+interface UserProfile {
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+}
 
 interface Settings {
   adBlockEnabled: boolean;
@@ -23,6 +29,8 @@ interface Settings {
   searchEngine: "google" | "duckduckgo" | "bing";
   homePage: string;
   showBlockNotifications: boolean;
+  trackersBlocked: number;
+  userProfile: UserProfile;
 }
 
 interface BlockStats {
@@ -33,6 +41,12 @@ interface BlockStats {
 interface SettingsContextType {
   settings: Settings;
   updateSettings: (updates: Partial<Settings>) => Promise<void>;
+  // Toggle functions
+  toggleAdBlock: () => void;
+  toggleDataSaver: () => void;
+  incrementBlockedTrackers: () => void;
+  // User profile
+  updateUserProfile: (profile: Partial<UserProfile>) => void;
   // القائمة البيضاء
   whitelist: string[];
   addSiteToWhitelist: (domain: string) => Promise<void>;
@@ -43,19 +57,28 @@ interface SettingsContextType {
   resetStats: () => Promise<void>;
 }
 
+const defaultUserProfile: UserProfile = {
+  fullName: "",
+  email: "",
+  phone: "",
+  address: "",
+};
+
 const defaultSettings: Settings = {
   adBlockEnabled: true,
   dataSaverEnabled: false,
   searchEngine: "google",
   homePage: "https://www.google.com",
   showBlockNotifications: true,
+  trackersBlocked: 0,
+  userProfile: defaultUserProfile,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(
   undefined
 );
 
-const SETTINGS_STORAGE_KEY = "@nabdh_settings";
+const SETTINGS_STORAGE_KEY = "@nabdh_settings_v2";
 const WHITELIST_STORAGE_KEY = "@nabdh_whitelist";
 const BLOCK_STATS_STORAGE_KEY = "@nabdh_block_stats";
 
@@ -85,7 +108,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         if (storedWhitelist) {
           const parsed = JSON.parse(storedWhitelist);
           setWhitelistState(parsed);
-          setWhitelist(parsed); // تحديث الوحدة
+          setWhitelist(parsed);
         }
 
         // تحميل الإحصائيات
@@ -94,9 +117,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           const parsed = JSON.parse(storedStats);
           setBlockStatsState({
             totalBlocked: parsed.totalBlocked || 0,
-            sessionBlocked: 0, // نبدأ الجلسة من صفر
+            sessionBlocked: 0,
           });
-          loadStats({ totalBlocked: parsed.totalBlocked || 0 });
         }
       } catch (e) {
         console.error("[Settings] Load error:", e);
@@ -106,48 +128,88 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     loadAll();
   }, []);
 
+  // حفظ الإعدادات
+  const saveSettings = async (newSettings: Settings) => {
+    try {
+      await AsyncStorage.setItem(
+        SETTINGS_STORAGE_KEY,
+        JSON.stringify(newSettings)
+      );
+    } catch (e) {
+      console.error("[Settings] Save error:", e);
+    }
+  };
+
   // تحديث الإعدادات
   const updateSettings = useCallback(
     async (updates: Partial<Settings>) => {
       const newSettings = { ...settings, ...updates };
       setSettings(newSettings);
-      await AsyncStorage.setItem(
-        SETTINGS_STORAGE_KEY,
-        JSON.stringify(newSettings)
-      );
+      await saveSettings(newSettings);
     },
     [settings]
   );
 
+  // Toggle functions
+  const toggleAdBlock = useCallback(() => {
+    setSettings((prev) => {
+      const next = { ...prev, adBlockEnabled: !prev.adBlockEnabled };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
+
+  const toggleDataSaver = useCallback(() => {
+    setSettings((prev) => {
+      const next = { ...prev, dataSaverEnabled: !prev.dataSaverEnabled };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
+
+  const incrementBlockedTrackers = useCallback(() => {
+    setSettings((prev) => {
+      const next = { ...prev, trackersBlocked: prev.trackersBlocked + 1 };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
+
+  // تحديث بيانات الملف الشخصي
+  const updateUserProfile = useCallback((profile: Partial<UserProfile>) => {
+    setSettings((prev) => {
+      const next = {
+        ...prev,
+        userProfile: { ...prev.userProfile, ...profile },
+      };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
+
   // إضافة موقع للقائمة البيضاء
-  const addSiteToWhitelist = useCallback(
-    async (domain: string) => {
-      if (addToWhitelist(domain)) {
-        const newList = getWhitelist();
-        setWhitelistState(newList);
-        await AsyncStorage.setItem(
-          WHITELIST_STORAGE_KEY,
-          JSON.stringify(newList)
-        );
-      }
-    },
-    []
-  );
+  const addSiteToWhitelist = useCallback(async (domain: string) => {
+    if (addToWhitelist(domain)) {
+      const newList = getWhitelist();
+      setWhitelistState(newList);
+      await AsyncStorage.setItem(
+        WHITELIST_STORAGE_KEY,
+        JSON.stringify(newList)
+      );
+    }
+  }, []);
 
   // إزالة موقع من القائمة البيضاء
-  const removeSiteFromWhitelist = useCallback(
-    async (domain: string) => {
-      if (removeFromWhitelist(domain)) {
-        const newList = getWhitelist();
-        setWhitelistState(newList);
-        await AsyncStorage.setItem(
-          WHITELIST_STORAGE_KEY,
-          JSON.stringify(newList)
-        );
-      }
-    },
-    []
-  );
+  const removeSiteFromWhitelist = useCallback(async (domain: string) => {
+    if (removeFromWhitelist(domain)) {
+      const newList = getWhitelist();
+      setWhitelistState(newList);
+      await AsyncStorage.setItem(
+        WHITELIST_STORAGE_KEY,
+        JSON.stringify(newList)
+      );
+    }
+  }, []);
 
   // زيادة عداد الحظر
   const incrementBlockCount = useCallback(() => {
@@ -156,7 +218,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         totalBlocked: prev.totalBlocked + 1,
         sessionBlocked: prev.sessionBlocked + 1,
       };
-      // حفظ الإحصائيات بشكل غير متزامن
       AsyncStorage.setItem(
         BLOCK_STATS_STORAGE_KEY,
         JSON.stringify({ totalBlocked: newStats.totalBlocked })
@@ -180,6 +241,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       value={{
         settings,
         updateSettings,
+        toggleAdBlock,
+        toggleDataSaver,
+        incrementBlockedTrackers,
+        updateUserProfile,
         whitelist: whitelistState,
         addSiteToWhitelist,
         removeSiteFromWhitelist,

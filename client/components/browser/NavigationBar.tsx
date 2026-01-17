@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Pressable, StyleSheet, Platform } from "react-native";
+import { View, Pressable, StyleSheet, Platform, Alert } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import Animated, {
@@ -11,8 +11,10 @@ import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useTheme } from "@/context/ThemeContext";
+import { useSettings } from "@/context/SettingsContext";
 import { Spacing } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
+import { getAutoFillScript } from "@/lib/autoFill";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -68,12 +70,25 @@ export function NavigationBar({ onAIPress }: NavigationBarProps) {
   const colors = useColors();
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { activeTab, goBack, goForward, reload, goHome, isIncognitoMode } =
+  const { settings } = useSettings();
+  const { activeTab, goBack, goForward, reload, goHome, isIncognitoMode, webViewRef } =
     useBrowser();
 
   const backgroundColor = isIncognitoMode
     ? colors.incognitoBackground
     : colors.backgroundDefault;
+
+  // دالة التعبئة التلقائية
+  const handleAutoFill = () => {
+    const { userProfile } = settings;
+    if (!userProfile.email && !userProfile.fullName) {
+      Alert.alert("تنبيه", "يرجى تعبئة بياناتك في الإعدادات أولاً");
+      return;
+    }
+
+    const script = getAutoFillScript(userProfile);
+    webViewRef.current?.injectJavaScript(script);
+  };
 
   const renderContent = () => (
     <View style={[styles.innerContainer, { paddingBottom: insets.bottom + Spacing.xs }]}>
@@ -89,15 +104,16 @@ export function NavigationBar({ onAIPress }: NavigationBarProps) {
       />
       <NavButton icon="refresh-cw" onPress={reload} />
       <NavButton icon="home" onPress={goHome} />
+      <NavButton icon="edit-3" onPress={handleAutoFill} />
       <NavButton icon="cpu" onPress={onAIPress} highlight />
     </View>
   );
 
   if (Platform.OS === "ios" && !isIncognitoMode) {
     return (
-      <BlurView 
-        intensity={80} 
-        tint={isDark ? "dark" : "light"} 
+      <BlurView
+        intensity={80}
+        tint={isDark ? "dark" : "light"}
         style={[styles.container, { borderTopColor: colors.border }]}
       >
         {renderContent()}
