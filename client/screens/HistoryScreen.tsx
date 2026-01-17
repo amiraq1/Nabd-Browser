@@ -1,0 +1,274 @@
+import React, { useCallback, useMemo } from "react";
+import { View, StyleSheet, FlatList, Pressable, Alert } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useHeaderHeight } from "@react-navigation/elements";
+import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import Animated, { FadeInRight } from "react-native-reanimated";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
+import { ThemedText } from "@/components/ThemedText";
+import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { useBrowser } from "@/context/BrowserContext";
+import type { HistoryItem } from "@/types/browser";
+import { RootStackParamList } from "@/navigation/RootStackNavigator";
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+interface HistoryItemRowProps {
+  item: HistoryItem;
+  onPress: () => void;
+  index: number;
+}
+
+function HistoryItemRow({ item, onPress, index }: HistoryItemRowProps) {
+  const getDomain = (url: string) => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return url;
+    }
+  };
+
+  const formatTime = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString("ar-SA", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  return (
+    <Animated.View entering={FadeInRight.delay(index * 30).duration(200)}>
+      <Pressable
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onPress();
+        }}
+        style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+      >
+        <View style={styles.favicon}>
+          <Feather name="globe" size={18} color={Colors.dark.textSecondary} />
+        </View>
+        <View style={styles.itemContent}>
+          <ThemedText numberOfLines={1} style={styles.itemTitle}>
+            {item.title}
+          </ThemedText>
+          <ThemedText numberOfLines={1} style={styles.itemUrl}>
+            {getDomain(item.url)}
+          </ThemedText>
+        </View>
+        <ThemedText style={styles.timestamp}>{formatTime(item.visitedAt)}</ThemedText>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function EmptyState() {
+  return (
+    <View style={styles.emptyContainer}>
+      <View style={styles.emptyIcon}>
+        <Feather name="clock" size={64} color={Colors.dark.accent} />
+      </View>
+      <ThemedText type="h3" style={styles.emptyTitle}>
+        لا يوجد سجل
+      </ThemedText>
+      <ThemedText style={styles.emptyText}>
+        ستظهر هنا الصفحات التي تزورها
+      </ThemedText>
+    </View>
+  );
+}
+
+interface GroupedHistory {
+  date: string;
+  items: HistoryItem[];
+}
+
+export default function HistoryScreen() {
+  const navigation = useNavigation<NavigationProp>();
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
+  const { history, clearHistory, navigateTo } = useBrowser();
+
+  const groupedHistory = useMemo(() => {
+    const groups: Record<string, HistoryItem[]> = {};
+    history.forEach((item) => {
+      const date = new Date(item.visitedAt).toLocaleDateString("ar-SA", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(item);
+    });
+    return Object.entries(groups).map(([date, items]) => ({ date, items }));
+  }, [history]);
+
+  const handleClearHistory = useCallback(() => {
+    Alert.alert(
+      "مسح السجل",
+      "هل أنت متأكد من مسح كل السجل؟",
+      [
+        { text: "إلغاء", style: "cancel" },
+        {
+          text: "مسح",
+          style: "destructive",
+          onPress: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            clearHistory();
+          },
+        },
+      ]
+    );
+  }, [clearHistory]);
+
+  const handleHistoryPress = useCallback(
+    (url: string) => {
+      navigateTo(url);
+      navigation.goBack();
+    },
+    [navigateTo, navigation]
+  );
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () =>
+        history.length > 0 ? (
+          <Pressable onPress={handleClearHistory} hitSlop={12}>
+            <ThemedText style={styles.clearButton}>مسح الكل</ThemedText>
+          </Pressable>
+        ) : null,
+    });
+  }, [navigation, history.length, handleClearHistory]);
+
+  const renderSection = useCallback(
+    ({ item: group }: { item: GroupedHistory }) => (
+      <View style={styles.section}>
+        <ThemedText style={styles.sectionHeader}>{group.date}</ThemedText>
+        {group.items.map((item, index) => (
+          <HistoryItemRow
+            key={item.id}
+            item={item}
+            onPress={() => handleHistoryPress(item.url)}
+            index={index}
+          />
+        ))}
+      </View>
+    ),
+    [handleHistoryPress]
+  );
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={groupedHistory}
+        renderItem={renderSection}
+        keyExtractor={(item) => item.date}
+        contentContainerStyle={[
+          styles.list,
+          {
+            paddingTop: headerHeight + Spacing.lg,
+            paddingBottom: insets.bottom + Spacing.lg,
+          },
+          history.length === 0 && styles.emptyList,
+        ]}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={EmptyState}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.dark.backgroundRoot,
+  },
+  list: {
+    paddingHorizontal: Spacing.lg,
+  },
+  emptyList: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  section: {
+    marginBottom: Spacing.xl,
+  },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.dark.accent,
+    marginBottom: Spacing.sm,
+    textAlign: "right",
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.md,
+    backgroundColor: Colors.dark.backgroundDefault,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.xs,
+  },
+  itemPressed: {
+    backgroundColor: Colors.dark.backgroundSecondary,
+  },
+  favicon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.dark.backgroundSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: Spacing.sm,
+  },
+  itemContent: {
+    flex: 1,
+    marginRight: Spacing.sm,
+  },
+  itemTitle: {
+    fontSize: 14,
+    fontWeight: "500",
+    textAlign: "right",
+    marginBottom: 2,
+  },
+  itemUrl: {
+    fontSize: 12,
+    color: Colors.dark.textSecondary,
+    textAlign: "right",
+  },
+  timestamp: {
+    fontSize: 12,
+    color: Colors.dark.textSecondary,
+  },
+  clearButton: {
+    color: Colors.dark.error,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    paddingHorizontal: Spacing.xl,
+  },
+  emptyIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(0, 217, 255, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.xl,
+  },
+  emptyTitle: {
+    textAlign: "center",
+    marginBottom: Spacing.sm,
+  },
+  emptyText: {
+    textAlign: "center",
+    color: Colors.dark.textSecondary,
+    fontSize: 15,
+  },
+});
