@@ -8,7 +8,8 @@ import Animated, { FadeInRight } from "react-native-reanimated";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { ThemedText } from "@/components/ThemedText";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { useColors } from "@/hooks/useColors";
+import { Spacing, BorderRadius } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
 import type { HistoryItem } from "@/types/browser";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
@@ -22,6 +23,8 @@ interface HistoryItemRowProps {
 }
 
 function HistoryItemRow({ item, onPress, index }: HistoryItemRowProps) {
+  const colors = useColors();
+  
   const getDomain = (url: string) => {
     try {
       return new URL(url).hostname;
@@ -45,35 +48,43 @@ function HistoryItemRow({ item, onPress, index }: HistoryItemRowProps) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           onPress();
         }}
-        style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+        style={({ pressed }) => [
+          styles.item,
+          { backgroundColor: colors.backgroundDefault },
+          pressed && { backgroundColor: colors.backgroundSecondary },
+        ]}
       >
-        <View style={styles.favicon}>
-          <Feather name="globe" size={18} color={Colors.dark.textSecondary} />
+        <View style={[styles.favicon, { backgroundColor: colors.backgroundSecondary }]}>
+          <Feather name="globe" size={18} color={colors.textSecondary} />
         </View>
         <View style={styles.itemContent}>
-          <ThemedText numberOfLines={1} style={styles.itemTitle}>
+          <ThemedText numberOfLines={1} style={[styles.itemTitle, { color: colors.text }]}>
             {item.title}
           </ThemedText>
-          <ThemedText numberOfLines={1} style={styles.itemUrl}>
+          <ThemedText numberOfLines={1} style={[styles.itemUrl, { color: colors.textSecondary }]}>
             {getDomain(item.url)}
           </ThemedText>
         </View>
-        <ThemedText style={styles.timestamp}>{formatTime(item.visitedAt)}</ThemedText>
+        <ThemedText style={[styles.timestamp, { color: colors.textSecondary }]}>
+          {formatTime(item.visitedAt)}
+        </ThemedText>
       </Pressable>
     </Animated.View>
   );
 }
 
 function EmptyState() {
+  const colors = useColors();
+  
   return (
     <View style={styles.emptyContainer}>
-      <View style={styles.emptyIcon}>
-        <Feather name="clock" size={64} color={Colors.dark.accent} />
+      <View style={[styles.emptyIcon, { backgroundColor: `${colors.accent}15` }]}>
+        <Feather name="clock" size={64} color={colors.accent} />
       </View>
-      <ThemedText type="h3" style={styles.emptyTitle}>
+      <ThemedText type="h3" style={[styles.emptyTitle, { color: colors.text }]}>
         لا يوجد سجل
       </ThemedText>
-      <ThemedText style={styles.emptyText}>
+      <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
         ستظهر هنا الصفحات التي تزورها
       </ThemedText>
     </View>
@@ -86,6 +97,7 @@ interface GroupedHistory {
 }
 
 export default function HistoryScreen() {
+  const colors = useColors();
   const navigation = useNavigation<NavigationProp>();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
@@ -139,16 +151,16 @@ export default function HistoryScreen() {
       headerRight: () =>
         history.length > 0 ? (
           <Pressable onPress={handleClearHistory} hitSlop={12}>
-            <ThemedText style={styles.clearButton}>مسح الكل</ThemedText>
+            <ThemedText style={[styles.clearButton, { color: colors.error }]}>مسح الكل</ThemedText>
           </Pressable>
         ) : null,
     });
-  }, [navigation, history.length, handleClearHistory]);
+  }, [navigation, history.length, handleClearHistory, colors]);
 
   const renderSection = useCallback(
     ({ item: group }: { item: GroupedHistory }) => (
       <View style={styles.section}>
-        <ThemedText style={styles.sectionHeader}>{group.date}</ThemedText>
+        <ThemedText style={[styles.sectionHeader, { color: colors.accent }]}>{group.date}</ThemedText>
         {group.items.map((item, index) => (
           <HistoryItemRow
             key={item.id}
@@ -159,11 +171,11 @@ export default function HistoryScreen() {
         ))}
       </View>
     ),
-    [handleHistoryPress]
+    [handleHistoryPress, colors]
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.backgroundRoot }]}>
       <FlatList
         data={groupedHistory}
         renderItem={renderSection}
@@ -186,7 +198,6 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.backgroundRoot,
   },
   list: {
     paddingHorizontal: Spacing.lg,
@@ -201,7 +212,6 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.dark.accent,
     marginBottom: Spacing.sm,
     textAlign: "right",
   },
@@ -209,18 +219,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: Spacing.md,
-    backgroundColor: Colors.dark.backgroundDefault,
     borderRadius: BorderRadius.md,
     marginBottom: Spacing.xs,
-  },
-  itemPressed: {
-    backgroundColor: Colors.dark.backgroundSecondary,
   },
   favicon: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.dark.backgroundSecondary,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: Spacing.sm,
@@ -237,15 +242,12 @@ const styles = StyleSheet.create({
   },
   itemUrl: {
     fontSize: 12,
-    color: Colors.dark.textSecondary,
     textAlign: "right",
   },
   timestamp: {
     fontSize: 12,
-    color: Colors.dark.textSecondary,
   },
   clearButton: {
-    color: Colors.dark.error,
     fontSize: 14,
     fontWeight: "500",
   },
@@ -257,7 +259,6 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "rgba(0, 217, 255, 0.1)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing.xl,
@@ -268,7 +269,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: "center",
-    color: Colors.dark.textSecondary,
     fontSize: 15,
   },
 });

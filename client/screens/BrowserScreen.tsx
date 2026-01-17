@@ -1,7 +1,8 @@
 import React, { useRef, useCallback, useState } from "react";
-import { View, StyleSheet, Pressable } from "react-native";
+import { View, StyleSheet, Pressable, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
@@ -12,7 +13,9 @@ import { FAB } from "@/components/browser/FAB";
 import { TabsBottomSheet } from "@/components/browser/TabsBottomSheet";
 import { AIPanelSheet } from "@/components/browser/AIPanelSheet";
 import { DrawerMenu } from "@/components/browser/DrawerMenu";
-import { Colors, Spacing } from "@/constants/theme";
+import { useColors } from "@/hooks/useColors";
+import { useTheme } from "@/context/ThemeContext";
+import { Spacing } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
 
@@ -20,6 +23,8 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function BrowserScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const colors = useColors();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { tabs, isIncognitoMode } = useBrowser();
   const tabsSheetRef = useRef<BottomSheet>(null);
@@ -63,28 +68,48 @@ export default function BrowserScreen() {
   );
 
   const backgroundColor = isIncognitoMode
-    ? Colors.dark.incognitoBackground
-    : Colors.dark.backgroundRoot;
+    ? colors.incognitoBackground
+    : colors.backgroundRoot;
 
-  return (
-    <View style={[styles.container, { backgroundColor }]}>
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+  const renderHeader = () => {
+    const headerContent = (
+      <View style={[styles.headerContent, { paddingTop: insets.top }]}>
         <Pressable
           onPress={() => setDrawerVisible(true)}
           hitSlop={8}
           style={styles.menuButton}
         >
-          <Feather name="menu" size={24} color={Colors.dark.text} />
+          <Feather name="menu" size={24} color={colors.text} />
         </Pressable>
         <View style={styles.urlBarContainer}>
           <UrlBar />
         </View>
         <Pressable onPress={handleTabsOpen} hitSlop={8} style={styles.tabsButton}>
-          <View style={styles.tabsCount}>
-            <Feather name="layers" size={18} color={Colors.dark.text} />
+          <View style={[styles.tabsCount, { borderColor: colors.text }]}>
+            <Feather name="layers" size={18} color={colors.text} />
           </View>
         </Pressable>
       </View>
+    );
+
+    if (Platform.OS === "ios" && !isIncognitoMode) {
+      return (
+        <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={styles.header}>
+          {headerContent}
+        </BlurView>
+      );
+    }
+
+    return (
+      <View style={[styles.header, { backgroundColor: colors.backgroundDefault }]}>
+        {headerContent}
+      </View>
+    );
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor }]}>
+      {renderHeader()}
 
       <WebViewContainer />
 
@@ -109,10 +134,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    overflow: "hidden",
+  },
+  headerContent: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: Spacing.sm,
-    backgroundColor: Colors.dark.backgroundDefault,
   },
   menuButton: {
     padding: Spacing.sm,
@@ -128,7 +155,6 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: Colors.dark.text,
     alignItems: "center",
     justifyContent: "center",
   },

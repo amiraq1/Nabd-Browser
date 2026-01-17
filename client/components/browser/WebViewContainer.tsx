@@ -2,9 +2,11 @@ import React, { useState, useCallback } from "react";
 import { View, StyleSheet, Platform } from "react-native";
 import { WebView, WebViewNavigation } from "react-native-webview";
 import { ProgressBar } from "./ProgressBar";
-import { Colors } from "@/constants/theme";
+import { useColors } from "@/hooks/useColors";
 import { useBrowser } from "@/context/BrowserContext";
+import { useSettings } from "@/context/SettingsContext";
 import { historyStorage } from "@/lib/storage";
+import { AD_BLOCK_SCRIPT, shouldBlockRequest } from "@/lib/adBlocker";
 import type { HistoryItem } from "@/types/browser";
 
 function generateId(): string {
@@ -12,6 +14,8 @@ function generateId(): string {
 }
 
 export function WebViewContainer() {
+  const colors = useColors();
+  const { settings } = useSettings();
   const {
     activeTab,
     activeTabId,
@@ -61,26 +65,50 @@ export function WebViewContainer() {
       try {
         const data = JSON.parse(event.nativeEvent.data);
         if (data.type === "pageContent") {
-          // Page content extracted - this is handled by BrowserContext
         }
       } catch {
-        // Ignore parsing errors
       }
     },
     []
   );
 
+  const handleShouldStartLoad = useCallback(
+    (event: { url: string }) => {
+      if (settings.adBlockEnabled && shouldBlockRequest(event.url)) {
+        return false;
+      }
+      return true;
+    },
+    [settings.adBlockEnabled]
+  );
+
   if (!activeTab) {
     return (
       <View
-        style={[styles.container, { backgroundColor: Colors.dark.backgroundRoot }]}
+        style={[styles.container, { backgroundColor: colors.backgroundRoot }]}
       />
     );
   }
 
   const backgroundColor = isIncognitoMode
-    ? Colors.dark.incognitoBackground
-    : Colors.dark.backgroundRoot;
+    ? colors.incognitoBackground
+    : colors.backgroundRoot;
+
+  const injectedJS = `
+    (function() {
+      document.addEventListener('selectionchange', function() {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim()) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'selection',
+            text: selection.toString()
+          }));
+        }
+      });
+    })();
+    ${settings.adBlockEnabled ? AD_BLOCK_SCRIPT : ""}
+    true;
+  `;
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -105,6 +133,7 @@ export function WebViewContainer() {
           onNavigationStateChange={handleNavigationStateChange}
           onLoadProgress={handleLoadProgress}
           onMessage={handleMessage}
+          onShouldStartLoadWithRequest={handleShouldStartLoad}
           incognito={isIncognitoMode}
           javaScriptEnabled
           domStorageEnabled={!isIncognitoMode}
@@ -112,20 +141,9 @@ export function WebViewContainer() {
           allowsBackForwardNavigationGestures
           sharedCookiesEnabled={!isIncognitoMode}
           thirdPartyCookiesEnabled={!isIncognitoMode}
-          injectedJavaScript={`
-            (function() {
-              document.addEventListener('selectionchange', function() {
-                const selection = window.getSelection();
-                if (selection && selection.toString().trim()) {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({
-                    type: 'selection',
-                    text: selection.toString()
-                  }));
-                }
-              });
-            })();
-            true;
-          `}
+          cacheEnabled={!isIncognitoMode && !settings.dataSaverEnabled}
+          injectedJavaScript={injectedJS}
+          mediaPlaybackRequiresUserAction={settings.dataSaverEnabled}
         />
       )}
     </View>

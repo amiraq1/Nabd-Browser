@@ -11,7 +11,8 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/ThemedText";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { useColors } from "@/hooks/useColors";
+import { Spacing, BorderRadius } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -21,6 +22,7 @@ interface FABProps {
 }
 
 export function FAB({ onTabsPress }: FABProps) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const { tabs, createTab, isIncognitoMode } = useBrowser();
   const [showMenu, setShowMenu] = useState(false);
@@ -48,8 +50,8 @@ export function FAB({ onTabsPress }: FABProps) {
 
   const bottomOffset = Spacing.bottomNavHeight + insets.bottom + Spacing.lg;
   const backgroundColor = isIncognitoMode
-    ? Colors.dark.incognitoAccent
-    : Colors.dark.accent;
+    ? colors.incognitoAccent
+    : colors.accent;
 
   return (
     <>
@@ -64,8 +66,10 @@ export function FAB({ onTabsPress }: FABProps) {
           animatedStyle,
         ]}
       >
-        <View style={styles.tabCount}>
-          <ThemedText style={styles.tabCountText}>{tabs.length}</ThemedText>
+        <View style={[styles.tabCount, { borderColor: colors.buttonText }]}>
+          <ThemedText style={[styles.tabCountText, { color: colors.buttonText }]}>
+            {tabs.length}
+          </ThemedText>
         </View>
       </AnimatedPressable>
 
@@ -84,21 +88,29 @@ export function FAB({ onTabsPress }: FABProps) {
         </Pressable>
         <Animated.View
           entering={FadeIn.duration(150)}
-          style={[styles.menu, { bottom: bottomOffset + Spacing.fabSize + Spacing.sm }]}
+          style={[
+            styles.menu, 
+            { 
+              bottom: bottomOffset + Spacing.fabSize + Spacing.sm,
+              backgroundColor: colors.backgroundDefault,
+            }
+          ]}
         >
           <Pressable
             onPress={() => handleNewTab(false)}
-            style={styles.menuItem}
+            style={[styles.menuItem, { borderBottomColor: colors.border }]}
           >
-            <Feather name="plus" size={20} color={Colors.dark.accent} />
-            <ThemedText style={styles.menuText}>تبويب جديد</ThemedText>
+            <Feather name="plus" size={20} color={colors.accent} />
+            <ThemedText style={[styles.menuText, { color: colors.text }]}>
+              تبويب جديد
+            </ThemedText>
           </Pressable>
           <Pressable
             onPress={() => handleNewTab(true)}
             style={styles.menuItem}
           >
-            <Feather name="eye-off" size={20} color={Colors.dark.incognitoAccent} />
-            <ThemedText style={[styles.menuText, { color: Colors.dark.incognitoAccent }]}>
+            <Feather name="eye-off" size={20} color={colors.incognitoAccent} />
+            <ThemedText style={[styles.menuText, { color: colors.incognitoAccent }]}>
               تصفح خفي
             </ThemedText>
           </Pressable>
@@ -128,7 +140,6 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: Colors.dark.buttonText,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
@@ -136,7 +147,6 @@ const styles = StyleSheet.create({
   tabCountText: {
     fontSize: 12,
     fontWeight: "700",
-    color: Colors.dark.buttonText,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -148,7 +158,6 @@ const styles = StyleSheet.create({
   menu: {
     position: "absolute",
     right: Spacing.lg,
-    backgroundColor: Colors.dark.backgroundDefault,
     borderRadius: BorderRadius.md,
     padding: Spacing.sm,
     minWidth: 160,
@@ -168,6 +177,5 @@ const styles = StyleSheet.create({
   menuText: {
     fontSize: 15,
     fontWeight: "500",
-    color: Colors.dark.text,
   },
 });

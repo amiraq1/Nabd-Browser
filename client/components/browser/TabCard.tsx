@@ -6,10 +6,13 @@ import Animated, {
   useSharedValue,
   withSpring,
   FadeIn,
+  runOnJS,
 } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { useColors } from "@/hooks/useColors";
+import { Spacing, BorderRadius } from "@/constants/theme";
 import type { BrowserTab } from "@/types/browser";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -23,10 +26,17 @@ interface TabCardProps {
 }
 
 export function TabCard({ tab, isActive, onPress, onClose, index }: TabCardProps) {
+  const colors = useColors();
   const scale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const opacity = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [
+      { scale: scale.value },
+      { translateX: translateX.value },
+    ],
+    opacity: opacity.value,
   }));
 
   const handlePress = () => {
@@ -39,15 +49,37 @@ export function TabCard({ tab, isActive, onPress, onClose, index }: TabCardProps
     onClose();
   };
 
+  const triggerClose = () => {
+    handleClose();
+  };
+
+  const swipeGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .onUpdate((event) => {
+      translateX.value = event.translationX * 0.5;
+      opacity.value = 1 - Math.abs(event.translationX) / 300;
+    })
+    .onEnd((event) => {
+      if (Math.abs(event.translationX) > 100) {
+        translateX.value = withSpring(event.translationX > 0 ? 300 : -300);
+        opacity.value = withSpring(0, {}, () => {
+          runOnJS(triggerClose)();
+        });
+      } else {
+        translateX.value = withSpring(0);
+        opacity.value = withSpring(1);
+      }
+    });
+
   const backgroundColor = tab.isIncognito
-    ? Colors.dark.incognitoBackground
-    : Colors.dark.backgroundSecondary;
+    ? colors.incognitoBackground
+    : colors.backgroundSecondary;
 
   const borderColor = isActive
-    ? Colors.dark.accent
+    ? colors.accent
     : tab.isIncognito
-    ? Colors.dark.incognitoAccent
-    : "transparent";
+    ? colors.incognitoAccent
+    : colors.border;
 
   const getDomain = (url: string) => {
     try {
@@ -59,49 +91,57 @@ export function TabCard({ tab, isActive, onPress, onClose, index }: TabCardProps
 
   return (
     <Animated.View entering={FadeIn.delay(index * 50).duration(200)}>
-      <AnimatedPressable
-        onPress={handlePress}
-        onPressIn={() => (scale.value = withSpring(0.97))}
-        onPressOut={() => (scale.value = withSpring(1))}
-        style={[
-          styles.container,
-          { backgroundColor, borderColor },
-          animatedStyle,
-        ]}
-      >
-        <View style={styles.header}>
-          {tab.isIncognito ? (
-            <Feather
-              name="eye-off"
-              size={14}
-              color={Colors.dark.incognitoAccent}
-            />
-          ) : (
-            <Feather name="globe" size={14} color={Colors.dark.textSecondary} />
-          )}
-          <Pressable
-            onPress={handleClose}
-            hitSlop={8}
-            style={styles.closeButton}
-          >
-            <Feather name="x" size={16} color={Colors.dark.textSecondary} />
-          </Pressable>
-        </View>
-        <View style={styles.content}>
-          <ThemedText
-            numberOfLines={1}
-            style={[
-              styles.title,
-              tab.isIncognito && { color: Colors.dark.incognitoAccent },
-            ]}
-          >
-            {tab.title}
-          </ThemedText>
-          <ThemedText numberOfLines={1} style={styles.url}>
-            {getDomain(tab.url)}
-          </ThemedText>
-        </View>
-      </AnimatedPressable>
+      <GestureDetector gesture={swipeGesture}>
+        <AnimatedPressable
+          onPress={handlePress}
+          onPressIn={() => (scale.value = withSpring(0.97))}
+          onPressOut={() => (scale.value = withSpring(1))}
+          style={[
+            styles.container,
+            { backgroundColor, borderColor },
+            animatedStyle,
+          ]}
+        >
+          <View style={styles.header}>
+            <View style={[styles.iconContainer, { backgroundColor: colors.backgroundTertiary }]}>
+              {tab.isIncognito ? (
+                <Feather
+                  name="eye-off"
+                  size={12}
+                  color={colors.incognitoAccent}
+                />
+              ) : (
+                <Feather name="globe" size={12} color={colors.textSecondary} />
+              )}
+            </View>
+            <Pressable
+              onPress={handleClose}
+              hitSlop={8}
+              style={[styles.closeButton, { backgroundColor: colors.backgroundTertiary }]}
+            >
+              <Feather name="x" size={14} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+          <View style={styles.content}>
+            <ThemedText
+              numberOfLines={2}
+              style={[
+                styles.title,
+                { color: colors.text },
+                tab.isIncognito && { color: colors.incognitoAccent },
+              ]}
+            >
+              {tab.title}
+            </ThemedText>
+            <ThemedText numberOfLines={1} style={[styles.url, { color: colors.textSecondary }]}>
+              {getDomain(tab.url)}
+            </ThemedText>
+          </View>
+          {isActive ? (
+            <View style={[styles.activeIndicator, { backgroundColor: colors.accent }]} />
+          ) : null}
+        </AnimatedPressable>
+      </GestureDetector>
     </Animated.View>
   );
 }
@@ -111,7 +151,8 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     borderWidth: 2,
-    minHeight: 120,
+    minHeight: 140,
+    overflow: "hidden",
   },
   header: {
     flexDirection: "row",
@@ -119,8 +160,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: Spacing.sm,
   },
+  iconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   closeButton: {
-    padding: Spacing.xs,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
   },
   content: {
     flex: 1,
@@ -129,11 +181,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.dark.text,
     marginBottom: Spacing.xs,
   },
   url: {
-    fontSize: 12,
-    color: Colors.dark.textSecondary,
+    fontSize: 11,
+  },
+  activeIndicator: {
+    position: "absolute",
+    bottom: 0,
+    left: Spacing.md,
+    right: Spacing.md,
+    height: 3,
+    borderRadius: 2,
   },
 });

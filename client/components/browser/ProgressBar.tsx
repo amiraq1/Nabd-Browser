@@ -7,7 +7,7 @@ import Animated, {
   withSequence,
   Easing,
 } from "react-native-reanimated";
-import { Colors } from "@/constants/theme";
+import { useColors } from "@/hooks/useColors";
 
 interface ProgressBarProps {
   isLoading: boolean;
@@ -15,6 +15,7 @@ interface ProgressBarProps {
 }
 
 export function ProgressBar({ isLoading, progress }: ProgressBarProps) {
+  const colors = useColors();
   const width = useSharedValue(0);
   const opacity = useSharedValue(0);
 
@@ -41,14 +42,14 @@ export function ProgressBar({ isLoading, progress }: ProgressBarProps) {
 
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.bar, animatedStyle]} />
+      <Animated.View style={[styles.bar, { backgroundColor: colors.accent }, animatedStyle]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    height: 2,
+    height: 3,
     backgroundColor: "transparent",
     position: "absolute",
     top: 0,
@@ -58,6 +59,6 @@ const styles = StyleSheet.create({
   },
   bar: {
     height: "100%",
-    backgroundColor: Colors.dark.accent,
+    borderRadius: 2,
   },
 });

@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { View, TextInput, Pressable, StyleSheet } from "react-native";
+import { View, TextInput, Pressable, StyleSheet, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { useColors } from "@/hooks/useColors";
+import { useTheme } from "@/context/ThemeContext";
+import { Spacing, BorderRadius } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function UrlBar() {
+  const colors = useColors();
+  const { isDark } = useTheme();
   const { activeTab, navigateTo, isIncognitoMode } = useBrowser();
   const [inputValue, setInputValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -45,41 +50,46 @@ export function UrlBar() {
   };
 
   const backgroundColor = isIncognitoMode
-    ? Colors.dark.incognitoBackground
-    : Colors.dark.backgroundDefault;
+    ? colors.incognitoBackground
+    : colors.backgroundDefault;
 
-  return (
-    <View style={[styles.container, { backgroundColor }]}>
+  const inputBg = isIncognitoMode
+    ? "rgba(129, 140, 248, 0.15)"
+    : colors.backgroundSecondary;
+
+  const renderContent = () => (
+    <>
       <View
         style={[
           styles.inputContainer,
-          isFocused && styles.inputContainerFocused,
+          { backgroundColor: inputBg },
+          isFocused && { borderColor: colors.accent },
         ]}
       >
         {isIncognitoMode ? (
           <Feather
             name="eye-off"
             size={18}
-            color={Colors.dark.incognitoAccent}
+            color={colors.incognitoAccent}
             style={styles.icon}
           />
         ) : (
           <Feather
             name="search"
             size={18}
-            color={Colors.dark.textSecondary}
+            color={colors.textSecondary}
             style={styles.icon}
           />
         )}
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: colors.text }]}
           value={inputValue}
           onChangeText={setInputValue}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           onSubmitEditing={handleSubmit}
           placeholder="ابحث أو أدخل الرابط"
-          placeholderTextColor={Colors.dark.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="url"
@@ -92,7 +102,7 @@ export function UrlBar() {
             hitSlop={8}
             style={styles.clearButton}
           >
-            <Feather name="x" size={18} color={Colors.dark.textSecondary} />
+            <Feather name="x" size={18} color={colors.textSecondary} />
           </Pressable>
         ) : null}
       </View>
@@ -100,16 +110,37 @@ export function UrlBar() {
         onPress={handleSubmit}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={[styles.goButton, animatedStyle]}
+        style={[styles.goButton, { backgroundColor: colors.accent }, animatedStyle]}
       >
-        <Feather name="arrow-left" size={20} color={Colors.dark.buttonText} />
+        <Feather name="arrow-left" size={20} color={colors.buttonText} />
       </AnimatedPressable>
+    </>
+  );
+
+  if (Platform.OS === "ios" && !isIncognitoMode) {
+    return (
+      <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={[styles.container, { backgroundColor: "transparent" }]}>
+        <View style={styles.innerContainer}>
+          {renderContent()}
+        </View>
+      </BlurView>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor }]}>
+      <View style={styles.innerContainer}>
+        {renderContent()}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    overflow: "hidden",
+  },
+  innerContainer: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: Spacing.md,
@@ -120,22 +151,17 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.dark.backgroundSecondary,
     borderRadius: BorderRadius.lg,
     height: Spacing.inputHeight,
     paddingHorizontal: Spacing.md,
     borderWidth: 1,
     borderColor: "transparent",
   },
-  inputContainerFocused: {
-    borderColor: Colors.dark.accent,
-  },
   icon: {
     marginRight: Spacing.sm,
   },
   input: {
     flex: 1,
-    color: Colors.dark.text,
     fontSize: 15,
     textAlign: "left",
     writingDirection: "ltr",
@@ -146,7 +172,6 @@ const styles = StyleSheet.create({
   goButton: {
     width: Spacing.inputHeight,
     height: Spacing.inputHeight,
-    backgroundColor: Colors.dark.accent,
     borderRadius: BorderRadius.lg,
     alignItems: "center",
     justifyContent: "center",

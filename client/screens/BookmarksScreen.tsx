@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { View, StyleSheet, FlatList, Pressable, Image } from "react-native";
+import { View, StyleSheet, FlatList, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
@@ -8,7 +8,8 @@ import Animated, { FadeInRight, FadeOutLeft } from "react-native-reanimated";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { ThemedText } from "@/components/ThemedText";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { useColors } from "@/hooks/useColors";
+import { Spacing, BorderRadius } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
 import type { Bookmark } from "@/types/browser";
 import { RootStackParamList } from "@/navigation/RootStackNavigator";
@@ -23,6 +24,8 @@ interface BookmarkItemProps {
 }
 
 function BookmarkItem({ item, onPress, onDelete, index }: BookmarkItemProps) {
+  const colors = useColors();
+  
   const getDomain = (url: string) => {
     try {
       return new URL(url).hostname;
@@ -41,16 +44,20 @@ function BookmarkItem({ item, onPress, onDelete, index }: BookmarkItemProps) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           onPress();
         }}
-        style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+        style={({ pressed }) => [
+          styles.item,
+          { backgroundColor: colors.backgroundDefault },
+          pressed && { backgroundColor: colors.backgroundSecondary },
+        ]}
       >
-        <View style={styles.favicon}>
-          <Feather name="globe" size={20} color={Colors.dark.textSecondary} />
+        <View style={[styles.favicon, { backgroundColor: colors.backgroundSecondary }]}>
+          <Feather name="globe" size={20} color={colors.textSecondary} />
         </View>
         <View style={styles.itemContent}>
-          <ThemedText numberOfLines={1} style={styles.itemTitle}>
+          <ThemedText numberOfLines={1} style={[styles.itemTitle, { color: colors.text }]}>
             {item.title}
           </ThemedText>
-          <ThemedText numberOfLines={1} style={styles.itemUrl}>
+          <ThemedText numberOfLines={1} style={[styles.itemUrl, { color: colors.textSecondary }]}>
             {getDomain(item.url)}
           </ThemedText>
         </View>
@@ -62,7 +69,7 @@ function BookmarkItem({ item, onPress, onDelete, index }: BookmarkItemProps) {
           hitSlop={12}
           style={styles.deleteButton}
         >
-          <Feather name="trash-2" size={18} color={Colors.dark.error} />
+          <Feather name="trash-2" size={18} color={colors.error} />
         </Pressable>
       </Pressable>
     </Animated.View>
@@ -70,15 +77,17 @@ function BookmarkItem({ item, onPress, onDelete, index }: BookmarkItemProps) {
 }
 
 function EmptyState() {
+  const colors = useColors();
+  
   return (
     <View style={styles.emptyContainer}>
-      <View style={styles.emptyIcon}>
-        <Feather name="bookmark" size={64} color={Colors.dark.accent} />
+      <View style={[styles.emptyIcon, { backgroundColor: `${colors.accent}15` }]}>
+        <Feather name="bookmark" size={64} color={colors.accent} />
       </View>
-      <ThemedText type="h3" style={styles.emptyTitle}>
+      <ThemedText type="h3" style={[styles.emptyTitle, { color: colors.text }]}>
         لا توجد مفضلات بعد
       </ThemedText>
-      <ThemedText style={styles.emptyText}>
+      <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
         اضغط على أيقونة المفضلة لحفظ الصفحات
       </ThemedText>
     </View>
@@ -86,6 +95,7 @@ function EmptyState() {
 }
 
 export default function BookmarksScreen() {
+  const colors = useColors();
   const navigation = useNavigation<NavigationProp>();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
@@ -112,7 +122,7 @@ export default function BookmarksScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.backgroundRoot }]}>
       <FlatList
         data={bookmarks}
         renderItem={renderItem}
@@ -135,7 +145,6 @@ export default function BookmarksScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.backgroundRoot,
   },
   list: {
     paddingHorizontal: Spacing.lg,
@@ -148,18 +157,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: Spacing.md,
-    backgroundColor: Colors.dark.backgroundDefault,
     borderRadius: BorderRadius.md,
     marginBottom: Spacing.sm,
-  },
-  itemPressed: {
-    backgroundColor: Colors.dark.backgroundSecondary,
   },
   favicon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.dark.backgroundSecondary,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: Spacing.md,
@@ -176,7 +180,6 @@ const styles = StyleSheet.create({
   },
   itemUrl: {
     fontSize: 13,
-    color: Colors.dark.textSecondary,
     textAlign: "right",
   },
   deleteButton: {
@@ -190,7 +193,6 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "rgba(0, 217, 255, 0.1)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing.xl,
@@ -201,7 +203,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: "center",
-    color: Colors.dark.textSecondary,
     fontSize: 15,
   },
 });

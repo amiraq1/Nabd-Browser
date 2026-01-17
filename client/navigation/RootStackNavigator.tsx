@@ -1,12 +1,12 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useScreenOptions } from "@/hooks/useScreenOptions";
+import { useColors } from "@/hooks/useColors";
 import BrowserScreen from "@/screens/BrowserScreen";
 import BookmarksScreen from "@/screens/BookmarksScreen";
 import HistoryScreen from "@/screens/HistoryScreen";
 import DownloadsScreen from "@/screens/DownloadsScreen";
 import SettingsScreen from "@/screens/SettingsScreen";
-import { Colors } from "@/constants/theme";
 
 export type RootStackParamList = {
   Browser: undefined;
@@ -19,6 +19,7 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootStackNavigator() {
+  const colors = useColors();
   const screenOptions = useScreenOptions({ transparent: false });
 
   return (
@@ -26,11 +27,11 @@ export default function RootStackNavigator() {
       screenOptions={{
         ...screenOptions,
         headerStyle: {
-          backgroundColor: Colors.dark.backgroundDefault,
+          backgroundColor: colors.backgroundDefault,
         },
-        headerTintColor: Colors.dark.text,
+        headerTintColor: colors.text,
         contentStyle: {
-          backgroundColor: Colors.dark.backgroundRoot,
+          backgroundColor: colors.backgroundRoot,
         },
       }}
     >

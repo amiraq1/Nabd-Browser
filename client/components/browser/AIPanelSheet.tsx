@@ -16,7 +16,8 @@ import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { ThemedText } from "@/components/ThemedText";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { useColors } from "@/hooks/useColors";
+import { Spacing, BorderRadius } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
 import { apiRequest } from "@/lib/query-client";
 import type { AIMessage, AIAction } from "@/types/browser";
@@ -31,6 +32,7 @@ function generateId(): string {
 
 export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
   function AIPanelSheet({ onClose }, ref) {
+    const colors = useColors();
     const insets = useSafeAreaInsets();
     const { extractPageContent, selectedText, webViewRef } = useBrowser();
     const [messages, setMessages] = useState<AIMessage[]>([]);
@@ -52,27 +54,11 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
       []
     );
 
-    const getPageContent = useCallback((): Promise<string> => {
-      return new Promise((resolve) => {
-        webViewRef.current?.injectJavaScript(`
-          (function() {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'pageContent',
-              content: document.body.innerText
-            }));
-          })();
-          true;
-        `);
-        setTimeout(() => resolve(""), 500);
-      });
-    }, [webViewRef]);
-
     const handleAction = async (action: AIAction) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setIsLoading(true);
 
       try {
-        let content = "";
         webViewRef.current?.injectJavaScript(`
           (function() {
             window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -171,8 +157,8 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
         snapPoints={snapPoints}
         enablePanDownToClose
         backdropComponent={renderBackdrop}
-        backgroundStyle={styles.background}
-        handleIndicatorStyle={styles.indicator}
+        backgroundStyle={[styles.background, { backgroundColor: colors.backgroundRoot }]}
+        handleIndicatorStyle={[styles.indicator, { backgroundColor: colors.textSecondary }]}
         onClose={onClose}
         keyboardBehavior="extend"
       >
@@ -180,14 +166,14 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
           style={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}
         >
           <View style={styles.header}>
-            <View style={styles.aiLogo}>
-              <Feather name="cpu" size={20} color={Colors.dark.accent} />
+            <View style={[styles.aiLogo, { backgroundColor: `${colors.accent}20` }]}>
+              <Feather name="cpu" size={20} color={colors.accent} />
             </View>
-            <ThemedText type="h3" style={styles.title}>
+            <ThemedText type="h3" style={[styles.title, { color: colors.text }]}>
               AI
             </ThemedText>
             <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
-              <Feather name="x" size={24} color={Colors.dark.text} />
+              <Feather name="x" size={24} color={colors.text} />
             </Pressable>
           </View>
 
@@ -195,16 +181,17 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
             <View style={styles.actionButtons}>
               <Pressable
                 onPress={() => handleAction("summarize")}
-                style={styles.actionButton}
+                style={[styles.actionButton, { backgroundColor: colors.backgroundDefault, borderColor: colors.border }]}
                 disabled={isLoading}
               >
-                <Feather name="file-text" size={24} color={Colors.dark.accent} />
-                <ThemedText style={styles.actionText}>تلخيص الصفحة</ThemedText>
+                <Feather name="file-text" size={24} color={colors.accent} />
+                <ThemedText style={[styles.actionText, { color: colors.text }]}>تلخيص الصفحة</ThemedText>
               </Pressable>
               <Pressable
                 onPress={() => handleAction("explain")}
                 style={[
                   styles.actionButton,
+                  { backgroundColor: colors.backgroundDefault, borderColor: colors.border },
                   !selectedText && styles.actionButtonDisabled,
                 ]}
                 disabled={isLoading || !selectedText}
@@ -212,12 +199,12 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
                 <Feather
                   name="help-circle"
                   size={24}
-                  color={selectedText ? Colors.dark.accent : Colors.dark.textSecondary}
+                  color={selectedText ? colors.accent : colors.textSecondary}
                 />
                 <ThemedText
                   style={[
                     styles.actionText,
-                    !selectedText && { color: Colors.dark.textSecondary },
+                    { color: selectedText ? colors.text : colors.textSecondary },
                   ]}
                 >
                   شرح النص المحدد
@@ -225,11 +212,11 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
               </Pressable>
               <Pressable
                 onPress={() => handleAction("ask")}
-                style={styles.actionButton}
+                style={[styles.actionButton, { backgroundColor: colors.backgroundDefault, borderColor: colors.border }]}
                 disabled={isLoading}
               >
-                <Feather name="message-circle" size={24} color={Colors.dark.accent} />
-                <ThemedText style={styles.actionText}>سؤال عن الصفحة</ThemedText>
+                <Feather name="message-circle" size={24} color={colors.accent} />
+                <ThemedText style={[styles.actionText, { color: colors.text }]}>سؤال عن الصفحة</ThemedText>
               </Pressable>
             </View>
           ) : (
@@ -245,14 +232,14 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
                   style={[
                     styles.messageBubble,
                     msg.role === "user"
-                      ? styles.userMessage
-                      : styles.assistantMessage,
+                      ? [styles.userMessage, { backgroundColor: colors.accent }]
+                      : [styles.assistantMessage, { backgroundColor: colors.backgroundSecondary }],
                   ]}
                 >
                   <ThemedText
                     style={[
                       styles.messageText,
-                      msg.role === "user" && { color: Colors.dark.buttonText },
+                      { color: msg.role === "user" ? colors.buttonText : colors.text },
                     ]}
                   >
                     {msg.content}
@@ -261,8 +248,10 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
               ))}
               {isLoading ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator color={Colors.dark.accent} size="small" />
-                  <ThemedText style={styles.loadingText}>جاري التفكير...</ThemedText>
+                  <ActivityIndicator color={colors.accent} size="small" />
+                  <ThemedText style={[styles.loadingText, { color: colors.textSecondary }]}>
+                    جاري التفكير...
+                  </ThemedText>
                 </View>
               ) : null}
             </ScrollView>
@@ -270,11 +259,11 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
 
           <View style={styles.inputContainer}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.backgroundSecondary, color: colors.text }]}
               value={question}
               onChangeText={setQuestion}
               placeholder="اسأل عن أي شيء..."
-              placeholderTextColor={Colors.dark.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               onSubmitEditing={handleSendQuestion}
               returnKeyType="send"
               multiline
@@ -283,14 +272,14 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
               onPress={handleSendQuestion}
               style={[
                 styles.sendButton,
-                !question.trim() && styles.sendButtonDisabled,
+                { backgroundColor: question.trim() ? colors.accent : colors.backgroundSecondary },
               ]}
               disabled={!question.trim() || isLoading}
             >
               <Feather
                 name="send"
                 size={20}
-                color={question.trim() ? Colors.dark.buttonText : Colors.dark.textSecondary}
+                color={question.trim() ? colors.buttonText : colors.textSecondary}
               />
             </Pressable>
           </View>
@@ -302,12 +291,10 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
 
 const styles = StyleSheet.create({
   background: {
-    backgroundColor: Colors.dark.backgroundRoot,
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
   },
   indicator: {
-    backgroundColor: Colors.dark.textSecondary,
     width: 40,
   },
   content: {
@@ -323,7 +310,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(0, 217, 255, 0.15)",
     alignItems: "center",
     justifyContent: "center",
     marginRight: Spacing.sm,
@@ -343,11 +329,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.md,
-    backgroundColor: Colors.dark.backgroundDefault,
     padding: Spacing.lg,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
   },
   actionButtonDisabled: {
     opacity: 0.5,
@@ -355,7 +339,6 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 16,
     fontWeight: "500",
-    color: Colors.dark.text,
   },
   messagesContainer: {
     flex: 1,
@@ -371,11 +354,9 @@ const styles = StyleSheet.create({
   },
   userMessage: {
     alignSelf: "flex-end",
-    backgroundColor: Colors.dark.accent,
   },
   assistantMessage: {
     alignSelf: "flex-start",
-    backgroundColor: Colors.dark.backgroundSecondary,
   },
   messageText: {
     fontSize: 15,
@@ -389,7 +370,6 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
   },
   loadingText: {
-    color: Colors.dark.textSecondary,
     fontSize: 14,
   },
   inputContainer: {
@@ -400,11 +380,9 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: Colors.dark.backgroundSecondary,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
-    color: Colors.dark.text,
     fontSize: 15,
     maxHeight: 100,
     textAlign: "right",
@@ -413,11 +391,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.dark.accent,
     alignItems: "center",
     justifyContent: "center",
-  },
-  sendButtonDisabled: {
-    backgroundColor: Colors.dark.backgroundSecondary,
   },
 });

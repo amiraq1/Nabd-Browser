@@ -9,7 +9,8 @@ import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/ThemedText";
 import { TabCard } from "./TabCard";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { useColors } from "@/hooks/useColors";
+import { Spacing, BorderRadius } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
 
 interface TabsBottomSheetProps {
@@ -18,6 +19,7 @@ interface TabsBottomSheetProps {
 
 export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
   function TabsBottomSheet({ onClose }, ref) {
+    const colors = useColors();
     const insets = useSafeAreaInsets();
     const { width } = useWindowDimensions();
     const { tabs, activeTabId, switchTab, closeTab, createTab } = useBrowser();
@@ -73,39 +75,50 @@ export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
         snapPoints={snapPoints}
         enablePanDownToClose
         backdropComponent={renderBackdrop}
-        backgroundStyle={styles.background}
-        handleIndicatorStyle={styles.indicator}
+        backgroundStyle={[styles.background, { backgroundColor: colors.backgroundRoot }]}
+        handleIndicatorStyle={[styles.indicator, { backgroundColor: colors.textSecondary }]}
         onClose={onClose}
       >
         <BottomSheetView
           style={[styles.content, { paddingBottom: insets.bottom + Spacing.lg }]}
         >
           <View style={styles.header}>
-            <ThemedText type="h3" style={styles.title}>
+            <ThemedText type="h3" style={[styles.title, { color: colors.text }]}>
               التبويبات
             </ThemedText>
-            <View style={styles.tabCount}>
-              <ThemedText style={styles.tabCountText}>{tabs.length}</ThemedText>
+            <View style={[styles.tabCount, { backgroundColor: colors.accent }]}>
+              <ThemedText style={[styles.tabCountText, { color: colors.buttonText }]}>
+                {tabs.length}
+              </ThemedText>
             </View>
             <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
-              <Feather name="x" size={24} color={Colors.dark.text} />
+              <Feather name="x" size={24} color={colors.text} />
             </Pressable>
           </View>
 
           <View style={styles.newTabRow}>
             <Pressable
               onPress={() => handleNewTab(false)}
-              style={styles.newTabButton}
+              style={[
+                styles.newTabButton, 
+                { backgroundColor: colors.backgroundDefault, borderColor: colors.border }
+              ]}
             >
-              <Feather name="plus" size={20} color={Colors.dark.accent} />
-              <ThemedText style={styles.newTabText}>تبويب جديد</ThemedText>
+              <Feather name="plus" size={20} color={colors.accent} />
+              <ThemedText style={[styles.newTabText, { color: colors.accent }]}>
+                تبويب جديد
+              </ThemedText>
             </Pressable>
             <Pressable
               onPress={() => handleNewTab(true)}
-              style={[styles.newTabButton, styles.incognitoButton]}
+              style={[
+                styles.newTabButton, 
+                styles.incognitoButton,
+                { borderColor: colors.incognitoAccent }
+              ]}
             >
-              <Feather name="eye-off" size={20} color={Colors.dark.incognitoAccent} />
-              <ThemedText style={[styles.newTabText, { color: Colors.dark.incognitoAccent }]}>
+              <Feather name="eye-off" size={20} color={colors.incognitoAccent} />
+              <ThemedText style={[styles.newTabText, { color: colors.incognitoAccent }]}>
                 تصفح خفي
               </ThemedText>
             </Pressable>
@@ -128,12 +141,10 @@ export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
 
 const styles = StyleSheet.create({
   background: {
-    backgroundColor: Colors.dark.backgroundRoot,
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
   },
   indicator: {
-    backgroundColor: Colors.dark.textSecondary,
     width: 40,
   },
   content: {
@@ -150,14 +161,12 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   tabCount: {
-    backgroundColor: Colors.dark.accent,
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     marginLeft: Spacing.sm,
   },
   tabCountText: {
-    color: Colors.dark.buttonText,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -176,18 +185,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing.sm,
-    backgroundColor: Colors.dark.backgroundDefault,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
   },
   incognitoButton: {
-    borderColor: Colors.dark.incognitoAccent,
-    backgroundColor: "rgba(61, 90, 254, 0.1)",
+    backgroundColor: "rgba(129, 140, 248, 0.1)",
   },
   newTabText: {
-    color: Colors.dark.accent,
     fontWeight: "600",
   },
   list: {

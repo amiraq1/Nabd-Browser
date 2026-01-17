@@ -1,11 +1,14 @@
-import React, { useState } from "react";
-import { View, StyleSheet, Pressable, Switch, Alert, ScrollView, Image } from "react-native";
+import React from "react";
+import { View, StyleSheet, Pressable, Switch, Alert, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { ThemedText } from "@/components/ThemedText";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { useColors } from "@/hooks/useColors";
+import { useTheme } from "@/context/ThemeContext";
+import { useSettings } from "@/context/SettingsContext";
+import { Spacing, BorderRadius } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
 import { bookmarkStorage, historyStorage, downloadStorage } from "@/lib/storage";
 
@@ -30,6 +33,8 @@ function SettingItem({
   toggleValue,
   onToggle,
 }: SettingItemProps) {
+  const colors = useColors();
+  
   return (
     <Pressable
       onPress={() => {
@@ -40,25 +45,31 @@ function SettingItem({
       }}
       style={({ pressed }) => [
         styles.settingItem,
-        pressed && !toggle && styles.settingItemPressed,
+        { borderBottomColor: colors.border },
+        pressed && !toggle && { backgroundColor: colors.backgroundSecondary },
       ]}
       disabled={toggle}
     >
-      <View style={[styles.settingIcon, danger && styles.settingIconDanger]}>
+      <View style={[
+        styles.settingIcon, 
+        { backgroundColor: danger ? `${colors.error}15` : `${colors.accent}15` }
+      ]}>
         <Feather
           name={icon}
           size={20}
-          color={danger ? Colors.dark.error : Colors.dark.accent}
+          color={danger ? colors.error : colors.accent}
         />
       </View>
       <View style={styles.settingContent}>
         <ThemedText
-          style={[styles.settingLabel, danger && { color: Colors.dark.error }]}
+          style={[styles.settingLabel, { color: danger ? colors.error : colors.text }]}
         >
           {label}
         </ThemedText>
         {value ? (
-          <ThemedText style={styles.settingValue}>{value}</ThemedText>
+          <ThemedText style={[styles.settingValue, { color: colors.textSecondary }]}>
+            {value}
+          </ThemedText>
         ) : null}
       </View>
       {toggle ? (
@@ -69,16 +80,16 @@ function SettingItem({
             onToggle?.(val);
           }}
           trackColor={{
-            false: Colors.dark.backgroundSecondary,
-            true: Colors.dark.accent,
+            false: colors.backgroundSecondary,
+            true: colors.accent,
           }}
-          thumbColor={Colors.dark.text}
+          thumbColor={colors.text}
         />
       ) : (
         <Feather
           name="chevron-left"
           size={20}
-          color={Colors.dark.textSecondary}
+          color={colors.textSecondary}
         />
       )}
     </Pressable>
@@ -92,20 +103,27 @@ function SettingsSection({
   title: string;
   children: React.ReactNode;
 }) {
+  const colors = useColors();
+  
   return (
     <View style={styles.section}>
-      <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
-      <View style={styles.sectionContent}>{children}</View>
+      <ThemedText style={[styles.sectionTitle, { color: colors.accent }]}>
+        {title}
+      </ThemedText>
+      <View style={[styles.sectionContent, { backgroundColor: colors.backgroundDefault }]}>
+        {children}
+      </View>
     </View>
   );
 }
 
 export default function SettingsScreen() {
+  const colors = useColors();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
+  const { isDark, themeMode, setThemeMode } = useTheme();
+  const { settings, updateSettings } = useSettings();
   const { clearHistory, loadHistory, loadBookmarks } = useBrowser();
-  const [blockAds, setBlockAds] = useState(false);
-  const [saveData, setSaveData] = useState(false);
 
   const handleClearCache = () => {
     Alert.alert("مسح ذاكرة التخزين المؤقت", "هل أنت متأكد؟", [
@@ -158,9 +176,15 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleThemeChange = () => {
+    const newTheme = themeMode === "dark" ? "light" : "dark";
+    setThemeMode(newTheme);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.backgroundRoot }]}
       contentContainerStyle={{
         paddingTop: headerHeight + Spacing.lg,
         paddingBottom: insets.bottom + Spacing.xl,
@@ -169,23 +193,42 @@ export default function SettingsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.logoContainer}>
-        <View style={styles.logo}>
-          <Feather name="activity" size={40} color={Colors.dark.accent} />
+        <View style={[styles.logo, { backgroundColor: `${colors.accent}20` }]}>
+          <Feather name="activity" size={40} color={colors.accent} />
         </View>
-        <ThemedText type="h2" style={styles.appName}>
+        <ThemedText type="h2" style={[styles.appName, { color: colors.text }]}>
           نبض
         </ThemedText>
-        <ThemedText style={styles.version}>الإصدار 1.0.0</ThemedText>
+        <ThemedText style={[styles.version, { color: colors.textSecondary }]}>
+          الإصدار 1.1.0
+        </ThemedText>
       </View>
 
+      <SettingsSection title="المظهر">
+        <SettingItem
+          icon={isDark ? "moon" : "sun"}
+          label="الوضع الداكن"
+          toggle
+          toggleValue={isDark}
+          onToggle={handleThemeChange}
+        />
+      </SettingsSection>
+
       <SettingsSection title="الخصوصية">
+        <SettingItem
+          icon="shield"
+          label="حظر الإعلانات"
+          toggle
+          toggleValue={settings.adBlockEnabled}
+          onToggle={(val) => updateSettings({ adBlockEnabled: val })}
+        />
         <SettingItem
           icon="trash"
           label="مسح ذاكرة التخزين المؤقت"
           onPress={handleClearCache}
         />
         <SettingItem
-          icon="shield"
+          icon="lock"
           label="مسح ملفات تعريف الارتباط"
           onPress={handleClearCookies}
         />
@@ -210,22 +253,12 @@ export default function SettingsScreen() {
           value="google.com"
           onPress={() => {}}
         />
-      </SettingsSection>
-
-      <SettingsSection title="الميزات">
-        <SettingItem
-          icon="shield-off"
-          label="حظر الإعلانات"
-          toggle
-          toggleValue={blockAds}
-          onToggle={setBlockAds}
-        />
         <SettingItem
           icon="download-cloud"
           label="توفير البيانات"
           toggle
-          toggleValue={saveData}
-          onToggle={setSaveData}
+          toggleValue={settings.dataSaverEnabled}
+          onToggle={(val) => updateSettings({ dataSaverEnabled: val })}
         />
       </SettingsSection>
 
@@ -241,7 +274,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.backgroundRoot,
   },
   logoContainer: {
     alignItems: "center",
@@ -251,7 +283,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 24,
-    backgroundColor: "rgba(0, 217, 255, 0.15)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing.md,
@@ -260,7 +291,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   version: {
-    color: Colors.dark.textSecondary,
     fontSize: 14,
   },
   section: {
@@ -269,12 +299,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.dark.accent,
     marginBottom: Spacing.sm,
     textAlign: "right",
   },
   sectionContent: {
-    backgroundColor: Colors.dark.backgroundDefault,
     borderRadius: BorderRadius.md,
     overflow: "hidden",
   },
@@ -283,22 +311,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.dark.border,
-  },
-  settingItemPressed: {
-    backgroundColor: Colors.dark.backgroundSecondary,
   },
   settingIcon: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: "rgba(0, 217, 255, 0.1)",
     alignItems: "center",
     justifyContent: "center",
     marginLeft: Spacing.md,
-  },
-  settingIconDanger: {
-    backgroundColor: "rgba(255, 61, 0, 0.1)",
   },
   settingContent: {
     flex: 1,
@@ -311,7 +331,6 @@ const styles = StyleSheet.create({
   },
   settingValue: {
     fontSize: 13,
-    color: Colors.dark.textSecondary,
     textAlign: "right",
     marginTop: 2,
   },

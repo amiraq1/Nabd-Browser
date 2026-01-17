@@ -2,42 +2,55 @@ import { Platform } from "react-native";
 
 export const Colors = {
   light: {
-    text: "#FFFFFF",
-    textSecondary: "#A0A0A0",
-    buttonText: "#0A0A0A",
-    tabIconDefault: "#A0A0A0",
-    tabIconSelected: "#00D9FF",
-    link: "#00D9FF",
-    accent: "#00D9FF",
-    incognitoAccent: "#3D5AFE",
-    success: "#00E676",
-    error: "#FF3D00",
-    backgroundRoot: "#0A0A0A",
-    backgroundDefault: "#1A1A1A",
-    backgroundSecondary: "#252525",
-    backgroundTertiary: "#303030",
-    incognitoBackground: "#1A237E",
-    border: "#333333",
+    text: "#1A1A1A",
+    textSecondary: "#6B7280",
+    buttonText: "#FFFFFF",
+    tabIconDefault: "#9CA3AF",
+    tabIconSelected: "#0891B2",
+    link: "#0891B2",
+    accent: "#0891B2",
+    incognitoAccent: "#6366F1",
+    success: "#10B981",
+    error: "#EF4444",
+    backgroundRoot: "#F9FAFB",
+    backgroundDefault: "#FFFFFF",
+    backgroundSecondary: "#F3F4F6",
+    backgroundTertiary: "#E5E7EB",
+    incognitoBackground: "#312E81",
+    border: "#E5E7EB",
+    glass: "rgba(255, 255, 255, 0.8)",
+    glassStrong: "rgba(255, 255, 255, 0.95)",
+    shadow: "rgba(0, 0, 0, 0.1)",
   },
   dark: {
     text: "#FFFFFF",
-    textSecondary: "#A0A0A0",
+    textSecondary: "#9CA3AF",
     buttonText: "#0A0A0A",
-    tabIconDefault: "#A0A0A0",
+    tabIconDefault: "#6B7280",
     tabIconSelected: "#00D9FF",
     link: "#00D9FF",
     accent: "#00D9FF",
-    incognitoAccent: "#3D5AFE",
-    success: "#00E676",
-    error: "#FF3D00",
+    incognitoAccent: "#818CF8",
+    success: "#34D399",
+    error: "#F87171",
     backgroundRoot: "#0A0A0A",
-    backgroundDefault: "#1A1A1A",
-    backgroundSecondary: "#252525",
-    backgroundTertiary: "#303030",
-    incognitoBackground: "#1A237E",
-    border: "#333333",
+    backgroundDefault: "#161616",
+    backgroundSecondary: "#1F1F1F",
+    backgroundTertiary: "#2A2A2A",
+    incognitoBackground: "#1E1B4B",
+    border: "#2A2A2A",
+    glass: "rgba(26, 26, 26, 0.85)",
+    glassStrong: "rgba(22, 22, 22, 0.95)",
+    shadow: "rgba(0, 0, 0, 0.4)",
   },
 };
+
+export type ColorScheme = keyof typeof Colors;
+export type ColorKeys = keyof typeof Colors.dark;
+
+export function getColors(isDark: boolean) {
+  return isDark ? Colors.dark : Colors.light;
+}
 
 export const Spacing = {
   xs: 4,
@@ -132,3 +145,27 @@ export const Fonts = Platform.select({
     sansMedium: "Tajawal, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   },
 });
+
+export const Shadows = {
+  sm: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  md: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  lg: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+};

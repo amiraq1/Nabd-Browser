@@ -6,7 +6,8 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInRight, FadeOutLeft } from "react-native-reanimated";
 import { ThemedText } from "@/components/ThemedText";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { useColors } from "@/hooks/useColors";
+import { Spacing, BorderRadius } from "@/constants/theme";
 import { downloadStorage } from "@/lib/storage";
 import type { DownloadItem } from "@/types/browser";
 
@@ -18,6 +19,8 @@ interface DownloadItemRowProps {
 }
 
 function DownloadItemRow({ item, onPress, onDelete, index }: DownloadItemRowProps) {
+  const colors = useColors();
+  
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -50,24 +53,28 @@ function DownloadItemRow({ item, onPress, onDelete, index }: DownloadItemRowProp
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           onPress();
         }}
-        style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+        style={({ pressed }) => [
+          styles.item,
+          { backgroundColor: colors.backgroundDefault },
+          pressed && { backgroundColor: colors.backgroundSecondary },
+        ]}
       >
-        <View style={styles.fileIcon}>
+        <View style={[styles.fileIcon, { backgroundColor: `${colors.accent}15` }]}>
           <Feather
             name={getFileIcon(item.mimeType)}
             size={22}
-            color={Colors.dark.accent}
+            color={colors.accent}
           />
         </View>
         <View style={styles.itemContent}>
-          <ThemedText numberOfLines={1} style={styles.itemTitle}>
+          <ThemedText numberOfLines={1} style={[styles.itemTitle, { color: colors.text }]}>
             {item.filename}
           </ThemedText>
           <View style={styles.itemMeta}>
-            <ThemedText style={styles.itemSize}>
+            <ThemedText style={[styles.itemSize, { color: colors.textSecondary }]}>
               {formatSize(item.fileSize)}
             </ThemedText>
-            <ThemedText style={styles.itemDate}>
+            <ThemedText style={[styles.itemDate, { color: colors.textSecondary }]}>
               {formatDate(item.downloadedAt)}
             </ThemedText>
           </View>
@@ -80,7 +87,7 @@ function DownloadItemRow({ item, onPress, onDelete, index }: DownloadItemRowProp
           hitSlop={12}
           style={styles.deleteButton}
         >
-          <Feather name="trash-2" size={18} color={Colors.dark.error} />
+          <Feather name="trash-2" size={18} color={colors.error} />
         </Pressable>
       </Pressable>
     </Animated.View>
@@ -88,15 +95,17 @@ function DownloadItemRow({ item, onPress, onDelete, index }: DownloadItemRowProp
 }
 
 function EmptyState() {
+  const colors = useColors();
+  
   return (
     <View style={styles.emptyContainer}>
-      <View style={styles.emptyIcon}>
-        <Feather name="download" size={64} color={Colors.dark.accent} />
+      <View style={[styles.emptyIcon, { backgroundColor: `${colors.accent}15` }]}>
+        <Feather name="download" size={64} color={colors.accent} />
       </View>
-      <ThemedText type="h3" style={styles.emptyTitle}>
+      <ThemedText type="h3" style={[styles.emptyTitle, { color: colors.text }]}>
         لا توجد تنزيلات
       </ThemedText>
-      <ThemedText style={styles.emptyText}>
+      <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
         ستظهر هنا الملفات التي تقوم بتحميلها
       </ThemedText>
     </View>
@@ -104,6 +113,7 @@ function EmptyState() {
 }
 
 export default function DownloadsScreen() {
+  const colors = useColors();
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
@@ -141,7 +151,7 @@ export default function DownloadsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.backgroundRoot }]}>
       <FlatList
         data={downloads}
         renderItem={renderItem}
@@ -164,7 +174,6 @@ export default function DownloadsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.dark.backgroundRoot,
   },
   list: {
     paddingHorizontal: Spacing.lg,
@@ -177,18 +186,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: Spacing.md,
-    backgroundColor: Colors.dark.backgroundDefault,
     borderRadius: BorderRadius.md,
     marginBottom: Spacing.sm,
-  },
-  itemPressed: {
-    backgroundColor: Colors.dark.backgroundSecondary,
   },
   fileIcon: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "rgba(0, 217, 255, 0.1)",
     alignItems: "center",
     justifyContent: "center",
     marginLeft: Spacing.md,
@@ -210,11 +214,9 @@ const styles = StyleSheet.create({
   },
   itemSize: {
     fontSize: 12,
-    color: Colors.dark.textSecondary,
   },
   itemDate: {
     fontSize: 12,
-    color: Colors.dark.textSecondary,
   },
   deleteButton: {
     padding: Spacing.sm,
@@ -227,7 +229,6 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "rgba(0, 217, 255, 0.1)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing.xl,
@@ -238,7 +239,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: "center",
-    color: Colors.dark.textSecondary,
     fontSize: 15,
   },
 });

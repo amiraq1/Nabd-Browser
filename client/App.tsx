@@ -19,12 +19,27 @@ import { queryClient } from "@/lib/query-client";
 import RootStackNavigator from "@/navigation/RootStackNavigator";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { BrowserProvider } from "@/context/BrowserContext";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
+import { SettingsProvider } from "@/context/SettingsContext";
 
 SplashScreen.preventAutoHideAsync();
 
 if (Platform.OS !== "web") {
   I18nManager.allowRTL(true);
   I18nManager.forceRTL(true);
+}
+
+function AppContent() {
+  const { isDark } = useTheme();
+  
+  return (
+    <>
+      <NavigationContainer>
+        <RootStackNavigator />
+      </NavigationContainer>
+      <StatusBar style={isDark ? "light" : "dark"} />
+    </>
+  );
 }
 
 export default function App() {
@@ -47,18 +62,19 @@ export default function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
-          <GestureHandlerRootView style={styles.root}>
-            <KeyboardProvider>
-              <BrowserProvider>
-                <NavigationContainer>
-                  <RootStackNavigator />
-                </NavigationContainer>
-              </BrowserProvider>
-              <StatusBar style="light" />
-            </KeyboardProvider>
-          </GestureHandlerRootView>
-        </SafeAreaProvider>
+        <ThemeProvider>
+          <SettingsProvider>
+            <SafeAreaProvider>
+              <GestureHandlerRootView style={styles.root}>
+                <KeyboardProvider>
+                  <BrowserProvider>
+                    <AppContent />
+                  </BrowserProvider>
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </SafeAreaProvider>
+          </SettingsProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
