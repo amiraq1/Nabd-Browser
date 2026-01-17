@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 3.0.0"
+    "version": ">= 7.0.0"
   },
   "build": {
     "development": {
@@ -8,14 +8,23 @@
       "distribution": "internal"
     },
     "preview": {
+      "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "distribution": "internal"
+      }
     },
     "production": {
+      "node": "18.x",
+      "env": {
+        "EXPO_NO_TELEMETRY_DETACH": "1"
+      },
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "image": "latest"
+      },
+      "ios": {
+        "image": "latest"
       }
     }
   },

@@ -22,9 +22,10 @@ interface HistoryItemRowProps {
   index: number;
 }
 
-function HistoryItemRow({ item, onPress, index }: HistoryItemRowProps) {
+// ✅ 1. استخدام React.memo لتحسين الأداء
+const HistoryItemRow = React.memo(function HistoryItemRow({ item, onPress, index }: HistoryItemRowProps) {
   const colors = useColors();
-  
+
   const getDomain = (url: string) => {
     try {
       return new URL(url).hostname;
@@ -42,7 +43,7 @@ function HistoryItemRow({ item, onPress, index }: HistoryItemRowProps) {
   };
 
   return (
-    <Animated.View entering={FadeInRight.delay(index * 30).duration(200)}>
+    <Animated.View entering={FadeInRight.delay(Math.min(index * 30, 300)).duration(200)}>
       <Pressable
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -71,11 +72,11 @@ function HistoryItemRow({ item, onPress, index }: HistoryItemRowProps) {
       </Pressable>
     </Animated.View>
   );
-}
+}, (prev, next) => prev.item.id === next.item.id && prev.index === next.index);
 
 function EmptyState() {
   const colors = useColors();
-  
+
   return (
     <View style={styles.emptyContainer}>
       <View style={[styles.emptyIcon, { backgroundColor: `${colors.accent}15` }]}>
@@ -190,6 +191,13 @@ export default function HistoryScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={EmptyState}
+
+        // ✅ 2. إعدادات الأداء (Performance Props)
+        initialNumToRender={5}
+        maxToRenderPerBatch={5}
+        windowSize={3}
+        removeClippedSubviews={true} // لأداء أفضل على Android
+        updateCellsBatchingPeriod={50}
       />
     </View>
   );

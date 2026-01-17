@@ -13,7 +13,7 @@ import { FAB } from "@/components/browser/FAB";
 import { TabsBottomSheet } from "@/components/browser/TabsBottomSheet";
 import { AIPanelSheet } from "@/components/browser/AIPanelSheet";
 import { DrawerMenu } from "@/components/browser/DrawerMenu";
-import { AudioPlayer } from "@/components/browser/AudioPlayer";
+import { AudioReaderSheet } from "@/components/browser/AudioReaderSheet";
 import { useColors } from "@/hooks/useColors";
 import { useTheme } from "@/context/ThemeContext";
 import { Spacing } from "@/constants/theme";
@@ -30,6 +30,7 @@ export default function BrowserScreen() {
   const { tabs, isIncognitoMode } = useBrowser();
   const tabsSheetRef = useRef<BottomSheet>(null);
   const aiSheetRef = useRef<BottomSheet>(null);
+  const audioSheetRef = useRef<BottomSheet>(null);
   const [drawerVisible, setDrawerVisible] = useState(false);
 
   const handleTabsOpen = useCallback(() => {
@@ -46,6 +47,10 @@ export default function BrowserScreen() {
 
   const handleAIClose = useCallback(() => {
     aiSheetRef.current?.close();
+  }, []);
+
+  const handleAudioOpen = useCallback(() => {
+    audioSheetRef.current?.snapToIndex(0);
   }, []);
 
   const handleNavigate = useCallback(
@@ -85,6 +90,14 @@ export default function BrowserScreen() {
         <View style={styles.urlBarContainer}>
           <UrlBar />
         </View>
+
+        {/* زر القارئ الصوتي */}
+        <Pressable onPress={handleAudioOpen} hitSlop={8} style={styles.tabsButton}>
+          <View style={{ marginRight: 8 }}>
+            <Feather name="headphones" size={20} color={colors.text} />
+          </View>
+        </Pressable>
+
         <Pressable onPress={handleTabsOpen} hitSlop={8} style={styles.tabsButton}>
           <View style={[styles.tabsCount, { borderColor: colors.text }]}>
             <Feather name="layers" size={18} color={colors.text} />
@@ -114,12 +127,11 @@ export default function BrowserScreen() {
 
       <WebViewContainer />
 
-      <NavigationBar onAIPress={handleAIOpen} />
-
-      <FAB onTabsPress={handleTabsOpen} />
-
-      {/* المشغل الذكي الجديد */}
-      <AudioPlayer />
+      <NavigationBar
+        onAIPress={handleAIOpen}
+        onTabsPress={handleTabsOpen}
+        onMenuPress={() => setDrawerVisible(true)}
+      />
 
       <DrawerMenu
         visible={drawerVisible}
@@ -129,6 +141,7 @@ export default function BrowserScreen() {
 
       <TabsBottomSheet ref={tabsSheetRef} onClose={handleTabsClose} />
       <AIPanelSheet ref={aiSheetRef} onClose={handleAIClose} />
+      <AudioReaderSheet ref={audioSheetRef} onClose={() => audioSheetRef.current?.close()} />
     </View>
   );
 }

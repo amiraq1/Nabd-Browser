@@ -34,7 +34,7 @@ export interface DownloadItem {
   mimeType: string;
 }
 
-export type AIAction = "summarize" | "explain" | "ask";
+export type AIAction = "summarize" | "explain" | "ask" | "translate";
 
 export interface AIMessage {
   id: string;

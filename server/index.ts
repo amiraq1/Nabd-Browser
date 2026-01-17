@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import * as fs from "fs";
 import * as path from "path";
+import compression from "compression";
 
 const app = express();
 const log = console.log;
@@ -53,6 +54,9 @@ function setupCors(app: express.Application) {
 }
 
 function setupBodyParsing(app: express.Application) {
+  // ✅ إضافة ضغط البيانات
+  app.use(compression());
+
   app.use(
     express.json({
       verify: (req, _res, buf) => {
@@ -167,7 +171,14 @@ function configureExpoAndLanding(app: express.Application) {
     "templates",
     "landing-page.html",
   );
-  const landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
+  // Ensure template exists, or fallback
+  let landingPageTemplate = "";
+  try {
+    landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
+  } catch (e) {
+    landingPageTemplate = "<html><body><h1>Nabd Browser API Server</h1></body></html>";
+  }
+
   const appName = getAppName();
 
   log("Serving static Expo files with dynamic manifest routing");

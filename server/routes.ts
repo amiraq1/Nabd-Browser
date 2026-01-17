@@ -13,7 +13,7 @@ const anthropic = apiKey
 
 // دالة المحاكاة الذكية (للتجربة بدون مفتاح)
 function getMockResponse(
-  type: "summarize" | "explain" | "ask",
+  type: "summarize" | "explain" | "ask" | "translate",
   text: string
 ): string {
   if (type === "summarize") {
@@ -31,6 +31,13 @@ function getMockResponse(
       text.substring(0, 30) +
       '..."\n\n' +
       "هذا المفهوم يشير عادةً إلى [شرح افتراضي]. في الوضع المتصل، سيتم تحليل السياق بالكامل لتقديم شرح دقيق."
+    );
+  }
+  if (type === "translate") {
+    return (
+      '🌍 **ترجمة:**\n\n' +
+      '"' + text.substring(0, 50) + '..."\n\n' +
+      'الترجمة الافتراضية تظهر هنا. (وضع المحاكاة)'
     );
   }
   return "🤖 هذا رد تجريبي من المساعد الذكي (V2.0) لأنك تعمل في وضع التجربة.";
@@ -79,6 +86,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ explanation: (message.content[0] as any).text });
     } catch (error) {
       res.status(500).json({ error: "Failed" });
+    }
+  });
+
+  // 3. ترجمة
+  app.post("/api/ai/translate", async (req: Request, res: Response) => {
+    try {
+      const { selectedText, targetLang } = req.body; // targetLang default 'ar'
+      if (!anthropic) {
+        await new Promise((r) => setTimeout(r, 1000));
+        return res.json({ translation: getMockResponse("translate", selectedText) });
+      }
+
+      const lang = targetLang === 'en' ? 'الإنجليزية' : 'العربية';
+
+      const message = await anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 2048,
+        messages: [{ role: "user", content: `ترجم النص التالي إلى ${lang} بدقة مع الحفاظ على التنسيق:\n\n${selectedText}` }],
+      });
+      res.json({ translation: (message.content[0] as any).text });
+    } catch (error) {
+      res.status(500).json({ error: "Translation Failed" });
     }
   });
 

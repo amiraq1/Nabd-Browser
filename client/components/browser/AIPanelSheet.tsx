@@ -58,26 +58,27 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
       setIsLoading(true);
 
       try {
-        // 1. طلب استخراج النص من الصفحة
-        webViewRef.current?.injectJavaScript(`
-          (function() {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'pageContent',
-              content: document.body.innerText.slice(0, 50000)
-            }));
-          })();
-          true;
-        `);
-
-        // 2. انتظار قصير لضمان وصول النص وتحديث الـ State
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // نستخدم pageContent الموجودة تلقائياً في الـ Context بدلاً من إعادة طلبها
+        const contentToSend = pageContent || "";
 
         let response;
         let userMessage = "";
         let assistantMessage = "";
 
-        // نستخدم pageContent الموجودة في الـ Context
-        const contentToSend = pageContent || "لا يوجد محتوى";
+        // التحقق من وجود محتوى قبل الإرسال (إلا في حالة الأسئلة العامة)
+        if (!contentToSend && action !== "ask") {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateId(),
+              role: "assistant",
+              content: "عذراً، لم يتم تحميل محتوى الصفحة بعد. يرجى الانتظار قليلاً.",
+              timestamp: Date.now(),
+            },
+          ]);
+          setIsLoading(false);
+          return;
+        }
 
         if (action === "summarize") {
           userMessage = "تلخيص الصفحة الحالية";
@@ -93,7 +94,7 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
               {
                 id: generateId(),
                 role: "assistant",
-                content: "الرجاء تحديد نص أولاً لشرحه",
+                content: "الرجاء تحديد نص أولاً لشرحه (اضغط مطولاً على أي كلمة في الصفحة)",
                 timestamp: Date.now(),
               },
             ]);
@@ -107,6 +108,29 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
           });
           const data = await response.json();
           assistantMessage = data.explanation || "لم أتمكن من شرح النص";
+        } else if (action === "translate") {
+          if (!selectedText) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: generateId(),
+                role: "assistant",
+                content: "الرجاء تحديد نص أولاً لترجمته.",
+                timestamp: Date.now(),
+              },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+          userMessage = `ترجمة: "${selectedText.slice(0, 50)}..."`;
+          // نرسل طلب الترجمة. (يمكننا إضافة خيار للغة لاحقاً، حالياً العربية افتراضياً)
+          response = await apiRequest("POST", "/api/ai/translate", {
+            selectedText,
+            targetLang: "ar"
+          });
+          const data = await response.json();
+          assistantMessage = data.translation || "عذراً، فشلت الترجمة.";
+
         } else if (action === "ask") {
           if (!question.trim()) {
             setIsLoading(false);
@@ -143,10 +167,11 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
           {
             id: generateId(),
             role: "assistant",
-            content: "حدث خطأ. الرجاء المحاولة مرة أخرى.",
+            content: "حدث خطأ في الاتصال بالذكاء الاصطناعي. الرجاء التحقق من الإنترنت.",
             timestamp: Date.now(),
           },
         ]);
+        console.error("AI Error:", error);
       } finally {
         setIsLoading(false);
       }
@@ -195,29 +220,57 @@ export const AIPanelSheet = forwardRef<BottomSheet, AIPanelSheetProps>(
                 <Feather name="file-text" size={24} color={colors.accent} />
                 <ThemedText style={[styles.actionText, { color: colors.text }]}>تلخيص الصفحة</ThemedText>
               </Pressable>
-              <Pressable
-                onPress={() => handleAction("explain")}
-                style={[
-                  styles.actionButton,
-                  { backgroundColor: colors.backgroundDefault, borderColor: colors.border },
-                  !selectedText && styles.actionButtonDisabled,
-                ]}
-                disabled={isLoading || !selectedText}
-              >
-                <Feather
-                  name="help-circle"
-                  size={24}
-                  color={selectedText ? colors.accent : colors.textSecondary}
-                />
-                <ThemedText
+
+              <View style={styles.actionButtonsRow}>
+                <Pressable
+                  onPress={() => handleAction("explain")}
                   style={[
-                    styles.actionText,
-                    { color: selectedText ? colors.text : colors.textSecondary },
+                    styles.actionButton,
+                    { backgroundColor: colors.backgroundDefault, borderColor: colors.border, flex: 1 },
+                    !selectedText && styles.actionButtonDisabled,
                   ]}
+                  disabled={isLoading || !selectedText}
                 >
-                  شرح النص المحدد
-                </ThemedText>
-              </Pressable>
+                  <Feather
+                    name="help-circle"
+                    size={24}
+                    color={selectedText ? colors.accent : colors.textSecondary}
+                  />
+                  <ThemedText
+                    style={[
+                      styles.actionText,
+                      { color: selectedText ? colors.text : colors.textSecondary },
+                    ]}
+                  >
+                    شرح
+                  </ThemedText>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => handleAction("translate")}
+                  style={[
+                    styles.actionButton,
+                    { backgroundColor: colors.backgroundDefault, borderColor: colors.border, flex: 1 },
+                    !selectedText && styles.actionButtonDisabled,
+                  ]}
+                  disabled={isLoading || !selectedText}
+                >
+                  <Feather
+                    name="globe"
+                    size={24}
+                    color={selectedText ? colors.accent : colors.textSecondary}
+                  />
+                  <ThemedText
+                    style={[
+                      styles.actionText,
+                      { color: selectedText ? colors.text : colors.textSecondary },
+                    ]}
+                  >
+                    ترجمة
+                  </ThemedText>
+                </Pressable>
+              </View>
+
               <Pressable
                 onPress={() => handleAction("ask")}
                 style={[styles.actionButton, { backgroundColor: colors.backgroundDefault, borderColor: colors.border }]}
@@ -332,6 +385,10 @@ const styles = StyleSheet.create({
   actionButtons: {
     gap: Spacing.md,
     marginTop: Spacing.lg,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: Spacing.md
   },
   actionButton: {
     flexDirection: "row",

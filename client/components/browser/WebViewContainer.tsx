@@ -14,6 +14,7 @@ import {
   isWhitelisted,
 } from "@/lib/adBlocker";
 import type { HistoryItem } from "@/types/browser";
+import { YOUTUBE_SCRIPT } from "@/lib/youtube";
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -88,6 +89,8 @@ function BlockNotification({
   );
 }
 
+const AD_BLOCK_SCRIPT = createAdBlockScript(); // تجهيز سكريبت الحظر
+
 export function WebViewContainer() {
   const colors = useColors();
   const { settings, incrementBlockCount, blockStats } = useSettings();
@@ -98,9 +101,11 @@ export function WebViewContainer() {
     webViewRef,
     isIncognitoMode,
     loadHistory,
-    setPageContent,
+    // 👇 إضافة الدوال المهمة لاستقبال البيانات
     setSelectedText,
+    setPageContent
   } = useBrowser();
+
   const [progress, setProgress] = useState(0);
   const [showNotification, setShowNotification] = useState(false);
   const notificationCount = useRef(0);
@@ -139,37 +144,40 @@ export function WebViewContainer() {
     []
   );
 
-  // معالجة الرسائل من WebView (بما فيها إشعارات الحظر)
+  // 👇 تحديث دالة معالجة الرسائل القادمة من الموقع
   const handleMessage = useCallback(
     (event: { nativeEvent: { data: string } }) => {
       try {
         const data = JSON.parse(event.nativeEvent.data);
 
-        // 1. التعامل مع النص المحدد
+        // 1. حالة تحديد نص (Selection)
         if (data.type === "selection") {
+          // console.log("تم تحديد نص:", data.text); 
           setSelectedText(data.text);
         }
 
-        // 2. التعامل مع محتوى الصفحة الكامل (للذكاء الاصطناعي)
+        // 2. حالة استقبال محتوى الصفحة (Page Content)
         if (data.type === "pageContent") {
           setPageContent(data.content);
         }
 
-        // 3. التعامل مع حظر الإعلانات
+        // 3. التعامل مع حظر الإعلانات (موجود سابقاً)
         if (data.type === "adBlocked" || data.type === "popupBlocked") {
-          // تحديث العداد
           incrementBlockCount();
           notificationCount.current = blockStats.sessionBlocked + 1;
-
-          // عرض الإشعار إذا كان مفعلاً
           if (settings.showBlockNotifications) {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setShowNotification(false);
             setTimeout(() => setShowNotification(true), 50);
           }
         }
-      } catch {
-        // تجاهل الأخطاء
+
+        // 4. رسائل التنبيه (Toasts)
+        if (data.type === 'toast') {
+          // يمكن إضافة ToastAndroid.show هنا إذا أردت
+        }
+      } catch (e) {
+        // تجاهل الأخطاء غير المهمة
       }
     },
     [
@@ -177,26 +185,34 @@ export function WebViewContainer() {
       setPageContent,
       incrementBlockCount,
       settings.showBlockNotifications,
-      blockStats.sessionBlocked,
+      blockStats.sessionBlocked
     ]
   );
 
-  // التحقق من الطلبات قبل تحميلها
   const handleShouldStartLoad = useCallback(
     (event: { url: string }) => {
-      // تجاوز الحظر للمواقع في القائمة البيضاء
+      // 1. منع فتح التطبيقات الخارجية
+      const isHttp = event.url.startsWith("http://") || event.url.startsWith("https://");
+      const isAbout = event.url.startsWith("about:");
+
+      if (!isHttp && !isAbout) {
+        // يمكن إضافة استثناءات هنا مثل mailto: أو tel: إذا رغب المستخدم
+        // حالياً نمنع كل شيء خارجي
+        return false;
+      }
+
+      // 2. القائمة البيضاء
       if (activeTab?.url && isWhitelisted(activeTab.url)) {
         return true;
       }
 
+      // 3. مانع الإعلانات
       if (settings.adBlockEnabled) {
         const result = shouldBlockRequest(event.url, activeTab?.url);
         if (result.blocked) {
-          // تحديث العداد
           incrementBlockCount();
           notificationCount.current = blockStats.sessionBlocked + 1;
 
-          // عرض الإشعار إذا كان مفعلاً
           if (settings.showBlockNotifications) {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setShowNotification(false);
@@ -218,74 +234,66 @@ export function WebViewContainer() {
   );
 
   if (!activeTab) {
-    return (
-      <View
-        style={[styles.container, { backgroundColor: colors.backgroundRoot }]}
-      />
-    );
+    return <View style={[styles.container, { backgroundColor: colors.backgroundRoot }]} />;
   }
 
   const backgroundColor = isIncognitoMode
     ? colors.incognitoBackground
     : colors.backgroundRoot;
 
-  // السكريبت المحقون
+  // 👇 الكود المحقون (Injected JavaScript)
+  // هذا الكود يستمع لأي تغيير في التحديد داخل الصفحة ويرسله للتطبيق
   const injectedJS = `
     (function() {
-      // 1. استخراج محتوى الصفحة تلقائياً عند التحميل (للمشغل الصوتي و AI)
-      function extractPageContent() {
-        const content = document.body.innerText;
-        if (content && content.length > 100) {
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'pageContent',
-            content: content.slice(0, 50000)
-          }));
-        }
-      }
-      
-      // استخراج عند التحميل
-      if (document.readyState === 'complete') {
-        setTimeout(extractPageContent, 1000);
-      } else {
-        window.addEventListener('load', function() {
-          setTimeout(extractPageContent, 1000);
-        });
-      }
-      
-      // 2. مراقبة تحديد النص
+      // إرسال النص المحدد عند التغيير
       document.addEventListener('selectionchange', function() {
         const selection = window.getSelection();
-        if (selection && selection.toString().trim()) {
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'selection',
-            text: selection.toString()
-          }));
+        const text = selection ? selection.toString().trim() : '';
+        
+        // نرسل الرسالة فقط إذا كان هناك نص محدد لتخفيف الضغط
+        if (text.length > 0) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'selection',
+                text: text
+            }));
+        } else {
+             // إرسال نص فارغ عند إلغاء التحديد
+             window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'selection',
+                text: ''
+            }));
         }
       });
+
+      // إرسال محتوى الصفحة عند التحميل (لأجل القارئ الصوتي والتلخيص)
+      setTimeout(function() {
+          const content = document.body.innerText;
+          if(content && content.length > 50) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'pageContent',
+                content: content.substring(0, 100000) // حد أقصى للحجم
+            }));
+          }
+      }, 1500);
+
     })();
-    ${settings.adBlockEnabled && !isWhitelisted(activeTab.url) ? createAdBlockScript() : ""}
+    ${settings.adBlockEnabled && !isWhitelisted(activeTab.url) ? AD_BLOCK_SCRIPT : ""}
+    ${settings.adBlockEnabled ? YOUTUBE_SCRIPT : ""} 
     true;
   `;
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      {/* إشعار الحظر */}
       <BlockNotification
         visible={showNotification}
         count={notificationCount.current}
       />
-
       <ProgressBar isLoading={activeTab.isLoading} progress={progress} />
-
       {Platform.OS === "web" ? (
         <View style={styles.webFallback}>
           <iframe
             src={activeTab.url}
-            style={{
-              width: "100%",
-              height: "100%",
-              border: "none",
-            }}
+            style={{ width: "100%", height: "100%", border: "none" }}
             title="Browser"
           />
         </View>
@@ -308,6 +316,8 @@ export function WebViewContainer() {
           cacheEnabled={!isIncognitoMode && !settings.dataSaverEnabled}
           injectedJavaScript={injectedJS}
           mediaPlaybackRequiresUserAction={settings.dataSaverEnabled}
+          // تفعيل القوائم المنسدلة وتحديد النصوص بشكل أفضل
+          overScrollMode="content"
         />
       )}
     </View>

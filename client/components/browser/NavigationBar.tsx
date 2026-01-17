@@ -1,148 +1,124 @@
 import React from "react";
-import { View, Pressable, StyleSheet, Platform, Alert } from "react-native";
+import { View, StyleSheet, Pressable, Platform, Alert } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useColors } from "@/hooks/useColors";
-import { useTheme } from "@/context/ThemeContext";
-import { useSettings } from "@/context/SettingsContext";
-import { Spacing } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
-import { getAutoFillScript } from "@/lib/autoFill";
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-interface NavButtonProps {
-  icon: keyof typeof Feather.glyphMap;
-  onPress: () => void;
-  disabled?: boolean;
-  highlight?: boolean;
-}
-
-function NavButton({ icon, onPress, disabled = false, highlight = false }: NavButtonProps) {
-  const colors = useColors();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: disabled ? 0.4 : 1,
-  }));
-
-  const handlePress = () => {
-    if (!disabled) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onPress();
-    }
-  };
-
-  return (
-    <AnimatedPressable
-      onPress={handlePress}
-      onPressIn={() => !disabled && (scale.value = withSpring(0.9))}
-      onPressOut={() => (scale.value = withSpring(1))}
-      disabled={disabled}
-      style={[
-        styles.button,
-        animatedStyle,
-        highlight && { backgroundColor: `${colors.accent}20` },
-      ]}
-    >
-      <Feather
-        name={icon}
-        size={22}
-        color={highlight ? colors.accent : disabled ? colors.textSecondary : colors.text}
-      />
-    </AnimatedPressable>
-  );
-}
+import { useColors } from "@/hooks/useColors";
+import { PulseButton } from "./PulseButton";
+import { Spacing, BorderRadius } from "@/constants/theme";
 
 interface NavigationBarProps {
+  onMenuPress: () => void;
+  onTabsPress: () => void;
   onAIPress: () => void;
 }
 
-export function NavigationBar({ onAIPress }: NavigationBarProps) {
+export function NavigationBar({ onMenuPress, onTabsPress, onAIPress }: NavigationBarProps) {
   const colors = useColors();
-  const { isDark } = useTheme();
-  const insets = useSafeAreaInsets();
-  const { settings } = useSettings();
-  const { activeTab, goBack, goForward, reload, goHome, isIncognitoMode, webViewRef } =
-    useBrowser();
-
-  const backgroundColor = isIncognitoMode
-    ? colors.incognitoBackground
-    : colors.backgroundDefault;
-
-  // دالة التعبئة التلقائية
-  const handleAutoFill = () => {
-    const { userProfile } = settings;
-    if (!userProfile.email && !userProfile.fullName) {
-      Alert.alert("تنبيه", "يرجى تعبئة بياناتك في الإعدادات أولاً");
-      return;
-    }
-
-    const script = getAutoFillScript(userProfile);
-    webViewRef.current?.injectJavaScript(script);
-  };
-
-  const renderContent = () => (
-    <View style={[styles.innerContainer, { paddingBottom: insets.bottom + Spacing.xs }]}>
-      <NavButton
-        icon="chevron-right"
-        onPress={goBack}
-        disabled={!activeTab?.canGoBack}
-      />
-      <NavButton
-        icon="chevron-left"
-        onPress={goForward}
-        disabled={!activeTab?.canGoForward}
-      />
-      <NavButton icon="refresh-cw" onPress={reload} />
-      <NavButton icon="home" onPress={goHome} />
-      <NavButton icon="edit-3" onPress={handleAutoFill} />
-      <NavButton icon="cpu" onPress={onAIPress} highlight />
-    </View>
-  );
-
-  if (Platform.OS === "ios" && !isIncognitoMode) {
-    return (
-      <BlurView
-        intensity={80}
-        tint={isDark ? "dark" : "light"}
-        style={[styles.container, { borderTopColor: colors.border }]}
-      >
-        {renderContent()}
-      </BlurView>
-    );
-  }
+  const { goBack, goForward, activeTab } = useBrowser();
 
   return (
-    <View style={[styles.container, { backgroundColor, borderTopColor: colors.border }]}>
-      {renderContent()}
+    <View style={styles.wrapper}>
+      {/* الخلفية الزجاجية للشريط */}
+      <BlurView intensity={Platform.OS === 'ios' ? 80 : 100} tint="dark" style={styles.blurContainer}>
+        <View style={[styles.container, { backgroundColor: colors.backgroundSecondary + 'CC' }]}>
+
+          {/* الجانب الأيمن: الرجوع والتقدم */}
+          <View style={styles.sideGroup}>
+            <Pressable
+              onPress={goBack}
+              disabled={!activeTab?.canGoBack}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                { opacity: !activeTab?.canGoBack ? 0.3 : pressed ? 0.5 : 1 }
+              ]}
+            >
+              <Feather name="chevron-right" size={24} color={colors.text} />
+            </Pressable>
+
+            <Pressable
+              onPress={goForward}
+              disabled={!activeTab?.canGoForward}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                { opacity: !activeTab?.canGoForward ? 0.3 : pressed ? 0.5 : 1 }
+              ]}
+            >
+              <Feather name="chevron-left" size={24} color={colors.text} />
+            </Pressable>
+          </View>
+
+          {/* المنتصف: زر نبض العائم */}
+          <View style={styles.centerButtonContainer}>
+            <PulseButton onPress={onAIPress} />
+          </View>
+
+          {/* الجانب الأيسر: التبويبات والقائمة */}
+          <View style={styles.sideGroup}>
+            <Pressable
+              onPress={onTabsPress}
+              style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
+            >
+              <View style={styles.tabIcon}>
+                <Feather name="layers" size={22} color={colors.text} />
+                {/* رقم التبويبات المفتوحة يمكن إضافته هنا */}
+              </View>
+            </Pressable>
+
+            <Pressable
+              onPress={onMenuPress}
+              style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
+            >
+              <Feather name="grid" size={22} color={colors.text} />
+            </Pressable>
+          </View>
+
+        </View>
+      </BlurView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    borderTopWidth: 1,
+  wrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
-  innerContainer: {
+  blurContainer: {
+    width: '100%',
+  },
+  container: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-around",
-    paddingTop: Spacing.sm,
+    justifyContent: "space-between",
+    height: 80,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
   },
-  button: {
-    width: 48,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 24,
+  sideGroup: {
+    flexDirection: 'row',
+    gap: 20,
+    alignItems: 'center',
+    width: '35%',
+    justifyContent: 'space-around',
   },
+  centerButtonContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    marginTop: -40
+  },
+  iconBtn: {
+    padding: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIcon: {
+    position: 'relative',
+  }
 });

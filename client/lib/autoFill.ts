@@ -4,19 +4,21 @@
  */
 
 interface UserProfile {
-    fullName: string;
-    email: string;
-    phone: string;
-    address: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
 }
 
-export function getAutoFillScript(profile: UserProfile): string {
-    // نقوم بترميز البيانات لتجنب مشاكل علامات التنصيص
-    const data = JSON.stringify(profile);
+export function getAutoFillScript(profile: UserProfile, loginCredentials?: { username?: string, password?: string }): string {
+  // نقوم بترميز البيانات لتجنب مشاكل علامات التنصيص
+  const data = JSON.stringify(profile);
+  const credentials = JSON.stringify(loginCredentials || {});
 
-    return `
+  return `
     (function() {
       const profile = ${data};
+      const creds = ${credentials};
       let filledCount = 0;
 
       function triggerEvents(element) {
@@ -25,7 +27,7 @@ export function getAutoFillScript(profile: UserProfile): string {
         element.dispatchEvent(new Event('blur', { bubbles: true }));
       }
 
-      function fill(selector, value) {
+      function fill(selector, value, isPassword = false) {
         if (!value) return;
         const inputs = document.querySelectorAll(selector);
         inputs.forEach(input => {
@@ -33,11 +35,14 @@ export function getAutoFillScript(profile: UserProfile): string {
           if (input.offsetParent !== null && !input.value) { 
             input.value = value;
             triggerEvents(input);
-            input.style.backgroundColor = "#e8f0fe"; // تلوين خفيف ليعرف المستخدم أنه تم تعبئته
+            input.style.backgroundColor = isPassword ? "#fff0f0" : "#e8f0fe"; 
+            input.style.border = isPassword ? "2px solid #ffcccc" : "1px solid #cce5ff";
             filledCount++;
           }
         });
       }
+
+      // --- تعبئة بيانات الملف الشخصي ---
 
       // 1. محاولة تعبئة البريد الإلكتروني
       fill('input[type="email"]', profile.email);
@@ -80,6 +85,18 @@ export function getAutoFillScript(profile: UserProfile): string {
         fill('input[autocomplete="family-name"]', nameParts[nameParts.length - 1]);
       }
 
+      // --- تعبئة بيانات الدخول (إذا توفرت) ---
+      if (creds.username) {
+          fill('input[type="text"][name*="user"]', creds.username);
+          fill('input[type="email"][name*="user"]', creds.username); 
+          fill('input[name="login"]', creds.username);
+          fill('input[id*="user"]', creds.username);
+      }
+
+      if (creds.password) {
+          fill('input[type="password"]', creds.password, true);
+      }
+
       if (filledCount > 0) {
         window.ReactNativeWebView.postMessage(JSON.stringify({
            type: 'toast', 
@@ -101,7 +118,7 @@ export function getAutoFillScript(profile: UserProfile): string {
  * يُعيد عدد الحقول القابلة للتعبئة
  */
 export function getFormDetectionScript(): string {
-    return `
+  return `
     (function() {
       const formInputs = document.querySelectorAll(
         'input[type="text"], input[type="email"], input[type="tel"], ' +
