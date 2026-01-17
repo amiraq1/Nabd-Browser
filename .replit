@@ -73,3 +73,6 @@ task = "shell.exec"
 args = "npm run expo:dev"
 waitForPort = 8081
 ensurePreviewReachable = "/status"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-75c5fe23-5f7e-4002-9ac6-99c47fec2a3a"
