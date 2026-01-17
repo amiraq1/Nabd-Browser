@@ -1,47 +1,25 @@
 import React from "react";
-import { View, Pressable, StyleSheet } from "react-native";
+import { View, StyleSheet, Pressable, Text } from "react-native";
+import { Image } from "expo-image"; // القاعدة 3: صور أسرع وأجمل
 import { Feather } from "@expo/vector-icons";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  FadeIn,
-  runOnJS,
-} from "react-native-reanimated";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import * as Haptics from "expo-haptics";
-import { Image } from "expo-image";
-import { ThemedText } from "@/components/ThemedText";
+import * as Haptics from "expo-haptics"; // القاعدة 8: إحساس الواجهة
+import Animated, { FadeIn, FadeOut, Layout } from "react-native-reanimated"; // القاعدة 6: أنيميشن ناعمة
 import { useColors } from "@/hooks/useColors";
-import { Spacing, BorderRadius } from "@/constants/theme";
-import type { BrowserTab } from "@/types/browser";
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+import { Shadows, BorderRadius, Spacing } from "@/constants/theme"; // القاعدة 1: نظام التصميم
+import type { BrowserTab } from "@/types/browser"; // تصحيح اسم النوع
 
 interface TabCardProps {
-  tab: BrowserTab;
+  tab: BrowserTab; // تصحيح اسم النوع
   isActive: boolean;
   onPress: () => void;
   onClose: () => void;
-  index: number;
+  index: number; // الإبقاء على index لأنه قد يستخدم لاحقاً، حتى لو لم نستخدمه الآن
 }
 
-export function TabCard({
-  tab,
-  isActive,
-  onPress,
-  onClose,
-  index,
-}: TabCardProps) {
-  const colors = useColors();
-  const scale = useSharedValue(1);
-  const translateX = useSharedValue(0);
-  const opacity = useSharedValue(1);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }, { translateX: translateX.value }],
-    opacity: opacity.value,
-  }));
+export function TabCard({ tab, isActive, onPress, onClose }: TabCardProps) {
+  const colors = useColors();
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -49,41 +27,9 @@ export function TabCard({
   };
 
   const handleClose = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); // اهتزاز خفيف عند الإغلاق
     onClose();
   };
-
-  const triggerClose = () => {
-    handleClose();
-  };
-
-  const swipeGesture = Gesture.Pan()
-    .activeOffsetX([-20, 20])
-    .onUpdate((event) => {
-      translateX.value = event.translationX * 0.5;
-      opacity.value = 1 - Math.abs(event.translationX) / 300;
-    })
-    .onEnd((event) => {
-      if (Math.abs(event.translationX) > 100) {
-        translateX.value = withSpring(event.translationX > 0 ? 300 : -300);
-        opacity.value = withSpring(0, {}, () => {
-          runOnJS(triggerClose)();
-        });
-      } else {
-        translateX.value = withSpring(0);
-        opacity.value = withSpring(1);
-      }
-    });
-
-  const backgroundColor = tab.isIncognito
-    ? colors.incognitoBackground
-    : colors.backgroundSecondary;
-
-  const borderColor = isActive
-    ? colors.accent
-    : tab.isIncognito
-      ? colors.incognitoAccent
-      : colors.border;
 
   const getDomain = (url: string) => {
     try {
@@ -93,139 +39,111 @@ export function TabCard({
     }
   };
 
-  // ✅ استخدام Google Favicon Kit لجلب الأيقونات
-  const faviconUrl = `https://www.google.com/s2/favicons?domain=${getDomain(tab.url)}&sz=64`;
+  // استخدام Google Favicon Kit إذا لم يكن Favicon التبويب موجوداً
+  const faviconUrl = tab.favicon || `https://www.google.com/s2/favicons?domain=${getDomain(tab.url)}&sz=64`;
 
   return (
-    <Animated.View entering={FadeIn.delay(index * 50).duration(200)}>
-      <GestureDetector gesture={swipeGesture}>
-        <AnimatedPressable
-          onPress={handlePress}
-          onPressIn={() =>
-            (scale.value = withSpring(0.95, { damping: 10, stiffness: 300 }))
-          }
-          onPressOut={() =>
-            (scale.value = withSpring(1, { damping: 10, stiffness: 300 }))
-          }
+    <AnimatedPressable
+      layout={Layout.springify().damping(15)} // تحريك العناصر المجاورة بنعومة عند الحذف
+      entering={FadeIn.duration(200)}
+      exiting={FadeOut.duration(200)}
+      onPress={handlePress}
+      style={[
+        styles.container,
+        {
+          backgroundColor: isActive ? colors.backgroundSecondary : colors.backgroundDefault, // تعديل طفيف ليتماشى مع الوضع الداكن
+          borderColor: isActive ? colors.accent : colors.border,
+        },
+      ]}
+    >
+      <View style={[styles.header, { borderBottomColor: colors.border + '40' }]}>
+        {/* أيقونة الموقع باستخدام expo-image */}
+        <View style={styles.faviconContainer}>
+          <Image
+            source={{ uri: faviconUrl }}
+            style={styles.favicon}
+            contentFit="contain"
+            transition={200} // انتقال ناعم لمنع الوميض
+            cachePolicy="memory-disk" // كاش قوي
+          />
+        </View>
+
+        <Text
+          numberOfLines={1}
           style={[
-            styles.container,
-            { backgroundColor, borderColor },
-            animatedStyle,
+            styles.title,
+            { color: isActive ? colors.accent : colors.text, fontWeight: isActive ? "600" : "400" }
           ]}
         >
-          <View style={styles.header}>
-            <View
-              style={[
-                styles.iconContainer,
-                { backgroundColor: colors.backgroundTertiary },
-              ]}
-            >
-              {tab.isIncognito ? (
-                <Feather
-                  name="eye-off"
-                  size={12}
-                  color={colors.incognitoAccent}
-                />
-              ) : (
-                // ✅ استخدام expo-image
-                <Image
-                  source={{ uri: faviconUrl }}
-                  style={{ width: 16, height: 16 }}
-                  contentFit="contain"
-                  cachePolicy="memory-disk"
-                  transition={200}
-                />
-              )}
-            </View>
-            <Pressable
-              onPress={handleClose}
-              hitSlop={8}
-              style={[
-                styles.closeButton,
-                { backgroundColor: colors.backgroundTertiary },
-              ]}
-            >
-              <Feather name="x" size={14} color={colors.textSecondary} />
-            </Pressable>
-          </View>
-          <View style={styles.content}>
-            <ThemedText
-              numberOfLines={2}
-              style={[
-                styles.title,
-                { color: colors.text },
-                tab.isIncognito && { color: colors.incognitoAccent },
-              ]}
-            >
-              {tab.title}
-            </ThemedText>
-            <ThemedText
-              numberOfLines={1}
-              style={[styles.url, { color: colors.textSecondary }]}
-            >
-              {getDomain(tab.url)}
-            </ThemedText>
-          </View>
-          {isActive ? (
-            <View
-              style={[
-                styles.activeIndicator,
-                { backgroundColor: colors.accent },
-              ]}
-            />
-          ) : null}
-        </AnimatedPressable>
-      </GestureDetector>
-    </Animated.View>
+          {tab.title || "تبويب جديد"}
+        </Text>
+
+        <Pressable
+          onPress={handleClose}
+          hitSlop={10} // توسيع مساحة اللمس
+          style={({ pressed }) => [
+            styles.closeBtn,
+            { backgroundColor: pressed ? colors.error + "20" : "transparent" },
+          ]}
+        >
+          <Feather name="x" size={16} color={colors.textSecondary} />
+        </Pressable>
+      </View>
+
+      {/* معاينة بسيطة (يمكن تطويرها لاحقاً لتعرض Screenshot حقيقي) */}
+      <View style={[styles.preview, { backgroundColor: colors.backgroundRoot }]} >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', opacity: 0.1 }}>
+          <Feather name="layout" size={40} color={colors.textSecondary} />
+        </View>
+      </View>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
+    height: 160, // ارتفاع ثابت
+    borderRadius: BorderRadius.lg, // 16
     borderWidth: 2,
-    minHeight: 140,
+    marginBottom: Spacing.md, // 12
     overflow: "hidden",
+    ...Shadows.sm, // القاعدة 1: ظلال موحدة
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: Spacing.sm,
+    padding: Spacing.sm, // 8
+    borderBottomWidth: 1,
+    height: 48,
   },
-  iconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    alignItems: "center",
+  faviconContainer: {
+    width: 28,
+    height: 28,
     justifyContent: "center",
-  },
-  closeButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
     alignItems: "center",
-    justifyContent: "center",
+    marginRight: 8,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 8,
   },
-  content: {
-    flex: 1,
-    justifyContent: "flex-end",
+  favicon: {
+    width: 18,
+    height: 18,
   },
   title: {
+    flex: 1,
     fontSize: 14,
-    fontWeight: "600",
-    marginBottom: Spacing.xs,
+    textAlign: "right", // للعربية
+    marginRight: 8,
   },
-  url: {
-    fontSize: 11,
+  closeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  activeIndicator: {
-    position: "absolute",
-    bottom: 0,
-    left: Spacing.md,
-    right: Spacing.md,
-    height: 3,
-    borderRadius: 2,
+  preview: {
+    flex: 1,
+    opacity: 0.8,
   },
 });
