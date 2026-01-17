@@ -59,6 +59,31 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (January 2026)
 
+### Version 1.1.0 - Enhanced Features
+1. **Theme System**:
+   - ThemeContext for centralized theme state management
+   - Light/Dark mode toggle with persistence via AsyncStorage
+   - Dynamic theme colors across all components using useColors hook
+   - Smooth theme transitions
+
+2. **Settings & Privacy**:
+   - SettingsContext for user preferences
+   - Ad blocking with 45+ blocked ad domains
+   - CSS-based ad element hiding for comprehensive ad removal
+   - Data saver mode for reduced bandwidth usage
+   - Search engine selector (Google, DuckDuckGo, Bing)
+
+3. **UI Enhancements**:
+   - Glass/blur effects using expo-blur on iOS
+   - Enhanced tab cards with swipe-to-close gestures
+   - Improved navigation bar with highlighted AI button
+   - Better visual feedback on interactions
+
+4. **Performance**:
+   - Data saver mode disables caching and media preloading
+   - Optimized ad blocking for faster page loads
+   - Improved WebView configuration
+
 ### MVP Implementation Complete
 1. **Browser Core Features**:
    - URL bar with search/URL detection and navigation
@@ -71,11 +96,13 @@ Preferred communication style: Simple, everyday language.
    - Tab grid view in bottom sheet
    - Incognito mode with separate styling
    - FAB with tab count display
+   - Swipe gestures for closing tabs
 
 3. **Data Persistence**:
    - Bookmarks: Add/remove/view saved pages
    - History: Auto-save visited pages with timestamps
    - Downloads: Track downloaded files
+   - Theme and settings preferences
    - All using AsyncStorage for local storage
 
 4. **AI Integration**:
@@ -87,20 +114,29 @@ Preferred communication style: Simple, everyday language.
 
 5. **UI/UX**:
    - Arabic RTL layout support
-   - Dark mode with electric cyan accent
+   - Light and Dark themes with electric cyan accent
    - Incognito mode with deep indigo theme
    - Tajawal Arabic font
    - Haptic feedback on interactions
    - Smooth animations with Reanimated
+   - Glass effects on iOS
 
 ## Project Structure
 
 ```
 client/
 ├── App.tsx                    # App entry with providers
-├── context/BrowserContext.tsx # Browser state management
+├── context/
+│   ├── BrowserContext.tsx     # Browser state management
+│   ├── ThemeContext.tsx       # Theme state (light/dark mode)
+│   └── SettingsContext.tsx    # User settings and preferences
+├── hooks/
+│   ├── useColors.ts           # Dynamic theme colors hook
+│   └── useTheme.ts            # Theme access hook
+├── lib/
+│   ├── storage.ts             # AsyncStorage utilities
+│   └── adBlocker.ts           # Ad blocking domains and CSS
 ├── types/browser.ts           # TypeScript interfaces
-├── lib/storage.ts             # AsyncStorage utilities
 ├── components/browser/        # Browser-specific components
 │   ├── UrlBar.tsx
 │   ├── NavigationBar.tsx
