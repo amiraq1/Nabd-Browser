@@ -3,7 +3,6 @@
     "name": "نبض",
     "slug": "nabdh-browser",
     "version": "1.1.0",
-    "owner": "nabdh",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "nabdh",
@@ -42,6 +41,12 @@
     ],
     "experiments": {
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4d1577a1-cd22-4266-a1d2-cb2666305349"
+      }
+    },
+    "owner": "amiraq"
   }
 }
