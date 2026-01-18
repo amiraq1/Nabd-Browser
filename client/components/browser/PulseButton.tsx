@@ -1,113 +1,204 @@
-import React, { useEffect, useRef } from "react";
-import { View, StyleSheet, Pressable, Animated, Easing } from "react-native";
+import React from "react";
+import { View, StyleSheet, Pressable } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+  withSpring,
+  Easing,
+  interpolate,
+} from "react-native-reanimated";
 import { useColors } from "@/hooks/useColors";
-import { Shadows } from "@/constants/theme";
+import { Shadows, AnimationConfig } from "@/constants/theme";
+import { useEffect } from "react";
 
 interface PulseButtonProps {
   onPress: () => void;
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
+
 export function PulseButton({ onPress }: PulseButtonProps) {
   const colors = useColors();
-  // قيم الأنميشن (الحجم والشفافية)
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  // Breathing animation values
+  const breathe = useSharedValue(0);
+  const glowOpacity = useSharedValue(0.3);
+  const scale = useSharedValue(1);
+  const rotation = useSharedValue(0);
 
   useEffect(() => {
-    // تشغيل أنميشن "النبض" بشكل مستمر
-    const breathe = Animated.loop(
-      Animated.parallel([
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.1,
-            duration: 1500,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 1500,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.sequence([
-          Animated.timing(glowAnim, {
-            toValue: 0.6,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(glowAnim, {
-            toValue: 0,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]),
+    // Organic breathing animation
+    breathe.value = withRepeat(
+      withSequence(
+        withTiming(1, {
+          duration: 2000,
+          easing: Easing.bezier(0.4, 0, 0.2, 1)
+        }),
+        withTiming(0, {
+          duration: 2000,
+          easing: Easing.bezier(0.4, 0, 0.2, 1)
+        }),
+      ),
+      -1, // Infinite
+      false
     );
-    breathe.start();
+
+    // Subtle glow pulse
+    glowOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.6, { duration: 1800 }),
+        withTiming(0.2, { duration: 1800 }),
+      ),
+      -1,
+      false
+    );
+
+    // Very subtle ambient rotation
+    rotation.value = withRepeat(
+      withSequence(
+        withTiming(3, { duration: 4000 }),
+        withTiming(-3, { duration: 4000 }),
+      ),
+      -1,
+      true
+    );
   }, []);
+
+  // Outer glow ring animation
+  const glowStyle = useAnimatedStyle(() => {
+    const scaleValue = interpolate(breathe.value, [0, 1], [1, 1.25]);
+    return {
+      transform: [{ scale: scaleValue }],
+      opacity: glowOpacity.value,
+    };
+  });
+
+  // Inner shimmer ring
+  const innerRingStyle = useAnimatedStyle(() => {
+    const scaleValue = interpolate(breathe.value, [0, 1], [1, 1.12]);
+    const opacityValue = interpolate(breathe.value, [0, 1], [0.5, 0.2]);
+    return {
+      transform: [{ scale: scaleValue }],
+      opacity: opacityValue,
+    };
+  });
+
+  // Button press animation
+  const buttonStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: scale.value },
+      { rotate: `${rotation.value}deg` },
+    ],
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.92, AnimationConfig.springBouncy);
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, AnimationConfig.spring);
+  };
 
   return (
     <View style={styles.container}>
-      {/* هالة النبض الخلفية */}
+      {/* Outer Glow Ring */}
       <Animated.View
         style={[
-          styles.glow,
-          {
-            backgroundColor: colors.accent,
-            transform: [{ scale: pulseAnim }],
-            opacity: glowAnim,
-          },
+          styles.glowRing,
+          { backgroundColor: colors.accent },
+          glowStyle,
         ]}
       />
 
-      {/* الزر الأساسي */}
-      <Pressable onPress={onPress} style={styles.buttonWrapper}>
+      {/* Inner Shimmer Ring */}
+      <Animated.View
+        style={[
+          styles.innerRing,
+          { borderColor: colors.accent },
+          innerRingStyle,
+        ]}
+      />
+
+      {/* Main Button */}
+      <AnimatedPressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[styles.buttonWrapper, buttonStyle]}
+      >
         <LinearGradient
-          colors={[colors.accent, "#6366f1"]} // تدرج بنفسجي وازرق
+          colors={[colors.accent, "#6366F1", "#8B5CF6"]}
           style={styles.gradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <Feather name="activity" size={28} color="#FFF" />
+          {/* Glass overlay effect */}
+          <View style={styles.glassOverlay} />
+
+          {/* Icon */}
+          <Feather
+            name="activity"
+            size={26}
+            color="#FFF"
+            style={styles.icon}
+          />
         </LinearGradient>
-      </Pressable>
+      </AnimatedPressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    width: 64,
-    height: 64,
+    width: 80,
+    height: 80,
     alignItems: "center",
     justifyContent: "center",
-    top: -20, // لرفع الزر للأعلى قليلاً (عائم)
+  },
+  glowRing: {
+    position: "absolute",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+  },
+  innerRing: {
+    position: "absolute",
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    borderWidth: 1.5,
+    backgroundColor: "transparent",
   },
   buttonWrapper: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    ...Shadows.lg, // ظل قوي
-    elevation: 8,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    ...Shadows.xl,
   },
   gradient: {
     width: "100%",
     height: "100%",
-    borderRadius: 28,
+    borderRadius: 30,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.2)",
+    overflow: "hidden",
   },
-  glow: {
-    position: "absolute",
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    zIndex: -1,
+  glassOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    height: "50%",
+  },
+  icon: {
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
 });

@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, forwardRef } from "react";
 import {
   View,
   StyleSheet,
-  Pressable,
   FlatList,
   useWindowDimensions,
 } from "react-native";
@@ -11,17 +10,65 @@ import BottomSheet, {
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
 import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { ThemedText } from "@/components/ThemedText";
 import { TabCard } from "./TabCard";
 import { useColors } from "@/hooks/useColors";
-import { Spacing, BorderRadius } from "@/constants/theme";
+import { Spacing, BorderRadius, Shadows } from "@/constants/theme";
 import { useBrowser } from "@/context/BrowserContext";
+import { ScaleButton } from "@/components/ui/ScaleButton";
 
 interface TabsBottomSheetProps {
   onClose: () => void;
 }
+
+// ✨ New Tab Button Component
+const NewTabButton = ({
+  icon,
+  label,
+  onPress,
+  gradientColors,
+  iconColor,
+  isIncognito,
+}: {
+  icon: keyof typeof Feather.glyphMap;
+  label: string;
+  onPress: () => void;
+  gradientColors: string[];
+  iconColor: string;
+  isIncognito?: boolean;
+}) => {
+  const colors = useColors();
+
+  return (
+    <ScaleButton
+      onPress={onPress}
+      hapticStyle="medium"
+      style={[
+        styles.newTabButton,
+        {
+          backgroundColor: isIncognito ? `${colors.incognitoAccent}15` : colors.backgroundSecondary,
+          borderColor: isIncognito ? colors.incognitoAccent : colors.border,
+        },
+      ]}
+    >
+      <LinearGradient
+        colors={gradientColors as any}
+        style={styles.newTabIconBg}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Feather name={icon} size={18} color="#FFF" />
+      </LinearGradient>
+      <ThemedText style={[styles.newTabText, { color: iconColor }]}>
+        {label}
+      </ThemedText>
+    </ScaleButton>
+  );
+};
 
 export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
   function TabsBottomSheet({ onClose }, ref) {
@@ -30,7 +77,7 @@ export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
     const { width } = useWindowDimensions();
     const { tabs, activeTabId, switchTab, closeTab, createTab } = useBrowser();
 
-    const snapPoints = useMemo(() => ["70%", "90%"], []);
+    const snapPoints = useMemo(() => ["65%", "90%"], []);
 
     const renderBackdrop = useCallback(
       (props: any) => (
@@ -38,19 +85,19 @@ export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
           {...props}
           disappearsOnIndex={-1}
           appearsOnIndex={0}
-          opacity={0.7}
+          opacity={0.6}
         />
       ),
       [],
     );
 
     const handleTabPress = (tabId: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       switchTab(tabId);
       onClose();
     };
 
     const handleNewTab = (isIncognito: boolean) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       createTab(isIncognito);
       onClose();
     };
@@ -73,6 +120,9 @@ export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
       ),
       [activeTabId, cardWidth],
     );
+
+    const regularTabs = tabs.filter(t => !t.isIncognito);
+    const incognitoTabs = tabs.filter(t => t.isIncognito);
 
     return (
       <BottomSheet
@@ -97,71 +147,75 @@ export const TabsBottomSheet = forwardRef<BottomSheet, TabsBottomSheetProps>(
             { paddingBottom: insets.bottom + Spacing.lg },
           ]}
         >
-          <View style={styles.header}>
-            <ThemedText
-              type="h3"
-              style={[styles.title, { color: colors.text }]}
-            >
-              التبويبات
-            </ThemedText>
-            <View style={[styles.tabCount, { backgroundColor: colors.accent }]}>
-              <ThemedText
-                style={[styles.tabCountText, { color: colors.buttonText }]}
-              >
-                {tabs.length}
+          {/* Header */}
+          <Animated.View
+            entering={FadeInDown.duration(300)}
+            style={styles.header}
+          >
+            <View style={styles.headerLeft}>
+              <View style={[styles.tabCountBadge, { backgroundColor: colors.accent }]}>
+                <ThemedText style={styles.tabCountText}>
+                  {tabs.length}
+                </ThemedText>
+              </View>
+              <ThemedText type="h3" style={[styles.title, { color: colors.text }]}>
+                التبويبات
               </ThemedText>
             </View>
-            <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
-              <Feather name="x" size={24} color={colors.text} />
-            </Pressable>
-          </View>
+            <ScaleButton onPress={onClose} style={styles.closeBtn}>
+              <Feather name="x" size={22} color={colors.textSecondary} />
+            </ScaleButton>
+          </Animated.View>
 
-          <View style={styles.newTabRow}>
-            <Pressable
+          {/* New Tab Buttons */}
+          <Animated.View
+            entering={FadeInUp.delay(100).duration(300)}
+            style={styles.newTabRow}
+          >
+            <NewTabButton
+              icon="plus"
+              label="تبويب جديد"
               onPress={() => handleNewTab(false)}
-              style={[
-                styles.newTabButton,
-                {
-                  backgroundColor: colors.backgroundDefault,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <Feather name="plus" size={20} color={colors.accent} />
-              <ThemedText style={[styles.newTabText, { color: colors.accent }]}>
-                تبويب جديد
-              </ThemedText>
-            </Pressable>
-            <Pressable
+              gradientColors={[colors.accent, "#0891B2"]}
+              iconColor={colors.accent}
+            />
+            <NewTabButton
+              icon="eye-off"
+              label="تصفح خفي"
               onPress={() => handleNewTab(true)}
-              style={[
-                styles.newTabButton,
-                styles.incognitoButton,
-                { borderColor: colors.incognitoAccent },
-              ]}
-            >
-              <Feather
-                name="eye-off"
-                size={20}
-                color={colors.incognitoAccent}
-              />
-              <ThemedText
-                style={[styles.newTabText, { color: colors.incognitoAccent }]}
-              >
-                تصفح خفي
-              </ThemedText>
-            </Pressable>
-          </View>
+              gradientColors={[colors.incognitoAccent, "#6366F1"]}
+              iconColor={colors.incognitoAccent}
+              isIncognito
+            />
+          </Animated.View>
 
-          <FlatList
-            data={tabs}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            numColumns={numColumns}
-            columnWrapperStyle={styles.row}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
+          {/* Tabs List */}
+          {tabs.length === 0 ? (
+            <Animated.View
+              entering={FadeInUp.delay(200).duration(300)}
+              style={styles.emptyState}
+            >
+              <View style={[styles.emptyIcon, { backgroundColor: `${colors.accent}15` }]}>
+                <Feather name="layers" size={32} color={colors.accent} />
+              </View>
+              <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
+                لا توجد تبويبات
+              </ThemedText>
+              <ThemedText style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                اضغط على "+ تبويب جديد" للبدء
+              </ThemedText>
+            </Animated.View>
+          ) : (
+            <FlatList
+              data={tabs}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+              numColumns={numColumns}
+              columnWrapperStyle={styles.row}
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
         </BottomSheetView>
       </BottomSheet>
     );
@@ -172,9 +226,12 @@ const styles = StyleSheet.create({
   background: {
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
+    ...Shadows.xl,
   },
   indicator: {
     width: 40,
+    height: 4,
+    borderRadius: 2,
   },
   content: {
     flex: 1,
@@ -183,30 +240,39 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: Spacing.lg,
+    paddingTop: Spacing.sm,
   },
-  title: {
-    flex: 1,
-    textAlign: "right",
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
   },
-  tabCount: {
+  tabCountBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    marginLeft: Spacing.sm,
   },
   tabCountText: {
-    fontSize: 12,
+    color: "#000",
+    fontSize: 13,
     fontWeight: "700",
   },
+  title: {
+    textAlign: "right",
+  },
   closeBtn: {
-    marginLeft: Spacing.md,
-    padding: Spacing.xs,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
   newTabRow: {
     flexDirection: "row",
     gap: Spacing.md,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   newTabButton: {
     flex: 1,
@@ -215,14 +281,41 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: Spacing.sm,
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
   },
-  incognitoButton: {
-    backgroundColor: "rgba(129, 140, 248, 0.1)",
+  newTabIconBg: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   newTabText: {
+    fontSize: 14,
     fontWeight: "600",
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: 100,
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: Spacing.xs,
+  },
+  emptySubtitle: {
+    fontSize: 14,
   },
   list: {
     paddingBottom: Spacing.xl,

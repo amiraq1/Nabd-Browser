@@ -1,52 +1,79 @@
-import React, { useRef } from "react";
-import { Pressable, Animated, ViewStyle, StyleProp } from "react-native";
+import React from "react";
+import { Pressable, ViewStyle, StyleProp, PressableProps } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import { AnimationConfig } from "@/constants/theme";
 
-interface Props {
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+interface Props extends Omit<PressableProps, 'style'> {
   children: React.ReactNode;
   onPress?: () => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
   style?: StyleProp<ViewStyle>;
   scaleTo?: number;
+  hapticStyle?: "light" | "medium" | "heavy" | "none";
 }
 
 export function ScaleButton({
   children,
   onPress,
+  onPressIn,
+  onPressOut,
   style,
-  scaleTo = 0.95,
+  scaleTo = 0.96,
+  hapticStyle = "light",
+  disabled,
+  ...pressableProps
 }: Props) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: scaleTo,
-      useNativeDriver: true,
-      speed: 20,
-      bounciness: 10,
-    }).start();
+    if (!disabled) {
+      scale.value = withSpring(scaleTo, AnimationConfig.springBouncy);
+      onPressIn?.();
+    }
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 20,
-      bounciness: 10,
-    }).start();
+    scale.value = withSpring(1, AnimationConfig.spring);
+    onPressOut?.();
+  };
+
+  const handlePress = () => {
+    if (!disabled) {
+      // Haptic feedback
+      if (hapticStyle !== "none") {
+        const feedbackStyle = {
+          light: Haptics.ImpactFeedbackStyle.Light,
+          medium: Haptics.ImpactFeedbackStyle.Medium,
+          heavy: Haptics.ImpactFeedbackStyle.Heavy,
+        };
+        Haptics.impactAsync(feedbackStyle[hapticStyle]);
+      }
+      onPress?.();
+    }
   };
 
   return (
-    <Pressable
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // اهتزاز خفيف جداً
-        onPress?.();
-      }}
+    <AnimatedPressable
+      onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      disabled={disabled}
+      style={[animatedStyle, style]}
+      {...pressableProps}
     >
-      <Animated.View style={[style, { transform: [{ scale: scaleAnim }] }]}>
-        {children}
-      </Animated.View>
-    </Pressable>
+      {children}
+    </AnimatedPressable>
   );
 }
